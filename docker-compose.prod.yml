@@ -1,0 +1,111 @@
+# =============================================================================
+# Production overrides — apply with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# - Locks down filesystems / capabilities
+# - Adds postgres-exporter + cadvisor for richer metrics
+# - Drops adminer & dev defaults
+# - Tighter healthcheck + restart policies
+# =============================================================================
+
+services:
+
+  postgres:
+    restart: always
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - work_mem=8MB
+      - -c
+      - log_statement=ddl
+      - -c
+      - log_min_duration_statement=2000
+    cap_drop: [ALL]
+    cap_add: [SETGID, SETUID, DAC_READ_SEARCH, FOWNER, CHOWN]
+    security_opt: ["no-new-privileges:true"]
+
+  backend:
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,prod
+      LOG_LEVEL_APP: INFO
+      LOG_LEVEL_ROOT: INFO
+    deploy:
+      replicas: ${BACKEND_REPLICAS:-3}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+
+  nginx:
+    restart: always
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=32M
+      - /var/run:size=8M
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE, CHOWN, SETGID, SETUID]
+    security_opt: ["no-new-privileges:true"]
+
+  loki:
+    restart: always
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  promtail:
+    restart: always
+
+  prometheus:
+    restart: always
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  grafana:
+    restart: always
+    environment:
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_STRICT_TRANSPORT_SECURITY: "true"
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: lunerie-postgres-exporter
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-lunerie}:${POSTGRES_PASSWORD:-lunerie}@postgres:5432/${POSTGRES_DB:-lunerie}?sslmode=disable"
+    expose: ["9187"]
+    networks: [lunerie-net]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: lunerie-cadvisor
+    restart: always
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    expose: ["8080"]
+    networks: [lunerie-net]

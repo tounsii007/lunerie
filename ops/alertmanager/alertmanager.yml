@@ -1,0 +1,27 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: default-receiver
+  routes:
+    - matchers: ['severity = "critical"']
+      receiver: pager-receiver
+      group_wait: 10s
+      repeat_interval: 30m
+
+receivers:
+  - name: default-receiver
+    # Default: log only — wire up Slack/Email/PagerDuty in your environment overlay.
+  - name: pager-receiver
+    # Webhook example — uncomment + set ALERTMANAGER_WEBHOOK_URL via env file.
+    # webhook_configs:
+    #   - url: ${ALERTMANAGER_WEBHOOK_URL}
+
+inhibit_rules:
+  - source_matchers: ['severity = "critical"']
+    target_matchers: ['severity = "warning"']
+    equal: ['alertname', 'instance']

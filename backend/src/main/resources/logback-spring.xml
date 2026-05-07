@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="appName"   source="spring.application.name" defaultValue="lunerie-api"/>
+    <springProperty scope="context" name="instance"  source="LUNERIE_INSTANCE_ID"     defaultValue="local"/>
+
+    <!-- Pretty console for local dev -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%X{requestId:-}] [%X{userId:-}] %-40.40logger{39} : %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Single-line JSON for Loki/Promtail in containerized envs -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <fieldName>ts</fieldName>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version>
+                    <fieldName>version</fieldName>
+                </version>
+                <pattern>
+                    <pattern>
+                        {
+                          "service": "${appName}",
+                          "instance": "${instance}",
+                          "level": "%level",
+                          "thread": "%thread",
+                          "logger": "%logger",
+                          "requestId": "%mdc{requestId:-}",
+                          "userId": "%mdc{userId:-}"
+                        }
+                    </pattern>
+                </pattern>
+                <message>
+                    <fieldName>message</fieldName>
+                </message>
+                <stackTrace>
+                    <fieldName>stack_trace</fieldName>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerThrowable>40</maxDepthPerThrowable>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
+                </stackTrace>
+            </providers>
+        </encoder>
+    </appender>
+
+    <springProfile name="docker,prod">
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!docker &amp; !prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <logger name="org.hibernate.SQL"      level="WARN"/>
+    <logger name="org.springframework"    level="INFO"/>
+    <logger name="com.lunerie"            level="INFO"/>
+</configuration>

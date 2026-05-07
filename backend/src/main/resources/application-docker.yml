@@ -1,0 +1,14 @@
+# Profile activated inside the Docker image (SPRING_PROFILES_ACTIVE=docker).
+# Overrides only what differs from the base application.yml.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/lunerie}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always

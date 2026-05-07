@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/Users/abder/Dropbox/PC/Downloads/projects/lunerie/src/i18n/locales/*.ts)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(wc -l /c/Users/abder/Dropbox/PC/Downloads/projects/lunerie/src/components/*.tsx)",
+      "Bash(python3 -c:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/abder/Dropbox/PC/Downloads/projects/lunerie/src/i18n/locales/**)",
+      "Bash(done)",
+      "Bash(xxd src/i18n/locales/uk.ts)",
+      "Bash(xxd src/i18n/locales/ro.ts)",
+      "Bash(do sed:*)",
+      "Bash(echo \"Fixed: $f\")",
+      "Bash(do)",
+      "Bash(sed -i \"/  likesCount:/a\\\\  back: ''Back'',\\\\n  options: ''Options'',\\\\n  emojis: ''Emojis'',\\\\n  typing: ''Typing'',\\\\n  send: ''Send'',\\\\n  close: ''Close'',\" \"$f\")",
+      "Bash(echo \"Updated $f\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm install *)",
+      "Bash(npm ls *)",
+      "Bash(npx vitest *)",
+      "Bash(chmod +x /c/projects/lunerie/scripts/*.sh)"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape all docker containers via the docker daemon socket
+  - job_name: docker
+    docker_sd_configs:
+      # Talks to docker-socket-proxy (read-only, restricted endpoints) instead of the raw socket.
+      - host: tcp://docker-socket-proxy:2375
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.*)'
+        target_label: container
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: compose_project
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: compose_service
+      - source_labels: [__meta_docker_container_label_logging_promtail]
+        target_label: promtail
+      - target_label: job
+        replacement: lunerie-docker
+    pipeline_stages:
+      # Backend writes JSON; parse it so structured fields become labels
+      - match:
+          selector: '{compose_service="backend"}'
+          stages:
+            - json:
+                expressions:
+                  ts: ts
+                  level: level
+                  service: service
+                  instance: instance
+                  logger: logger
+                  message: message
+                  requestId: requestId
+                  userId: userId
+            - labels:
+                level:
+                service:
+                instance:
+                logger:
+                requestId:
+                userId:
+            - timestamp:
+                source: ts
+                format: RFC3339Nano
+            - output:
+                source: message

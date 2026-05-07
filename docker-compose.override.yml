@@ -1,0 +1,48 @@
+# =============================================================================
+# Local development overrides — picked up automatically by `docker compose up`
+# Production deployment MUST use:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# (passing -f explicitly disables the auto-merge of this override file)
+#
+# Adminer is gated behind the `dev` profile and is NOT started by default.
+# Run with `docker compose --profile dev up` to include it.
+# =============================================================================
+services:
+
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  backend:
+    environment:
+      LOG_LEVEL_APP: DEBUG
+      LOG_LEVEL_SQL: WARN
+      SPRING_JPA_SHOW_SQL: "false"
+      LUNERIE_COOKIE_SECURE: "false"
+    deploy:
+      replicas: 1
+
+  adminer:
+    image: adminer:5
+    container_name: lunerie-adminer
+    restart: unless-stopped
+    profiles: ["dev"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: dracula
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    networks: [lunerie-net]
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: lunerie-mailhog
+    restart: unless-stopped
+    profiles: ["dev"]
+    ports:
+      - "${MAILHOG_HTTP_PORT:-8025}:8025"
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+    networks: [lunerie-net]

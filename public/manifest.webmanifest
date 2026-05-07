@@ -1,0 +1,17 @@
+{
+  "name": "Luma Places",
+  "short_name": "Luma",
+  "description": "Premium global hidden places and photospots app.",
+  "theme_color": "#07111f",
+  "background_color": "#07111f",
+  "display": "standalone",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

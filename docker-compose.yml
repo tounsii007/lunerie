@@ -1,0 +1,291 @@
+# =============================================================================
+# Lunerie · full stack
+# Postgres · Backend (scalable) · Loki · Promtail · Grafana · Prometheus · nginx
+# Run: docker compose up -d --build
+# Scale backend: docker compose up -d --scale backend=3
+# =============================================================================
+
+name: lunerie
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+    tag: "{{.Name}}"
+
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: lunerie-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-lunerie}
+      POSTGRES_USER:     ${POSTGRES_USER:-lunerie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lunerie}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: lunerie/api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-lunerie}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-lunerie}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-lunerie}
+      DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      DB_POOL_MIN: ${DB_POOL_MIN:-5}
+
+      # Security / JWT
+      LUNERIE_JWT_SECRET:   ${LUNERIE_JWT_SECRET:?Set LUNERIE_JWT_SECRET to >= 32 random bytes}
+      LUNERIE_JWT_ISSUER:   ${LUNERIE_JWT_ISSUER:-lunerie-api}
+      LUNERIE_JWT_AUDIENCE: ${LUNERIE_JWT_AUDIENCE:-lunerie-app}
+      LUNERIE_JWT_ACCESS_TTL:  ${LUNERIE_JWT_ACCESS_TTL:-PT15M}
+      LUNERIE_JWT_REFRESH_TTL: ${LUNERIE_JWT_REFRESH_TTL:-P30D}
+      LUNERIE_JWT_MAX_REFRESH_PER_USER: ${LUNERIE_JWT_MAX_REFRESH_PER_USER:-8}
+
+      # CORS
+      LUNERIE_CORS_ORIGINS: ${LUNERIE_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+
+      # Rate limiting
+      LUNERIE_RATE_CAPACITY: ${LUNERIE_RATE_CAPACITY:-30}
+      LUNERIE_RATE_REFILL:   ${LUNERIE_RATE_REFILL:-30}
+      LUNERIE_RATE_REFILL_PERIOD: ${LUNERIE_RATE_REFILL_PERIOD:-PT1M}
+
+      # Observability
+      LOG_LEVEL_ROOT: ${LOG_LEVEL_ROOT:-INFO}
+      LOG_LEVEL_APP:  ${LOG_LEVEL_APP:-INFO}
+      VIRTUAL_THREADS_ENABLED: ${VIRTUAL_THREADS_ENABLED:-true}
+
+      # Mail
+      SMTP_HOST:     ${SMTP_HOST:-mailhog}
+      SMTP_PORT:     ${SMTP_PORT:-1025}
+      SMTP_USER:     ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH:     ${SMTP_AUTH:-false}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      LUNERIE_MAIL_FROM:    ${LUNERIE_MAIL_FROM:-no-reply@lunerie.local}
+      LUNERIE_FRONTEND_URL: ${LUNERIE_FRONTEND_URL:-http://localhost:5173}
+
+      # Cookie / proxy
+      LUNERIE_COOKIE_SECURE:    ${LUNERIE_COOKIE_SECURE:-true}
+      LUNERIE_COOKIE_SAME_SITE: ${LUNERIE_COOKIE_SAME_SITE:-Strict}
+      LUNERIE_TRUSTED_PROXIES:  ${LUNERIE_TRUSTED_PROXIES:-}
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    deploy:
+      replicas: ${BACKEND_REPLICAS:-1}
+      resources:
+        limits:
+          memory: ${BACKEND_MEM_LIMIT:-768M}
+        reservations:
+          memory: ${BACKEND_MEM_RESERVE:-256M}
+    labels:
+      org.label-schema.service: lunerie-api
+      logging.promtail: "true"
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lunerie-nginx
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    volumes:
+      - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  loki:
+    image: grafana/loki:3.3.0
+    container_name: lunerie-loki
+    restart: unless-stopped
+    user: "0"
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./ops/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  # Read-only Docker API proxy — exposes only what Promtail needs (containers + events).
+  # This is far safer than mounting /var/run/docker.sock directly into Promtail.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: lunerie-docker-socket-proxy
+    restart: unless-stopped
+    privileged: false
+    environment:
+      CONTAINERS: 1     # GET /containers/*
+      EVENTS: 1         # GET /events
+      INFO: 1
+      VERSION: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [lunerie-net]
+
+  promtail:
+    image: grafana/promtail:3.3.0
+    container_name: lunerie-promtail
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+      docker-socket-proxy:
+        condition: service_started
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./ops/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: lunerie-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: lunerie-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./ops/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:17
+    container_name: lunerie-postgres-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST:      postgres
+      POSTGRES_DB:        ${POSTGRES_DB:-lunerie}
+      POSTGRES_USER:      ${POSTGRES_USER:-lunerie}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-lunerie}
+      SCHEDULE:           ${POSTGRES_BACKUP_SCHEDULE:-@daily}
+      BACKUP_KEEP_DAYS:   ${POSTGRES_BACKUP_KEEP_DAYS:-14}
+      BACKUP_KEEP_WEEKS:  ${POSTGRES_BACKUP_KEEP_WEEKS:-8}
+      BACKUP_KEEP_MONTHS: ${POSTGRES_BACKUP_KEEP_MONTHS:-6}
+      HEALTHCHECK_PORT:   8080
+    volumes:
+      - postgres-backup-data:/backups
+    networks: [lunerie-net]
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: lunerie-grafana
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_INSTALL_PLUGINS: "grafana-piechart-panel"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [lunerie-net]
+
+volumes:
+  postgres-data:
+  postgres-backup-data:
+  loki-data:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:
+
+networks:
+  lunerie-net:
+    driver: bridge

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+backend/target/
+
+# Environment
+.env
+.env.*.local
+.env.local
+.env.*.local
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / misc
+*.bak
+*.swp
+*.tmp
+
+# Coverage / test output
+coverage/
+.nyc_output/
+
+# Maven wrapper jars are kept; only ignore local working state
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar.lck

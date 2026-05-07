@@ -1,0 +1,65 @@
+groups:
+  - name: lunerie-backend
+    interval: 30s
+    rules:
+      - alert: BackendDown
+        expr: absent_over_time(up{job="lunerie-backend"}[2m]) == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Lunerie backend is down
+          description: No replicas of the lunerie-backend job have reported up within 2 minutes.
+
+      - alert: BackendHighErrorRate
+        expr: |
+          sum by (instance) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+          sum by (instance) (rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 5xx error rate above 5%
+          description: '{{ $labels.instance }} is serving more than 5% server errors over the last 5 minutes.'
+
+      - alert: BackendHighLatency
+        expr: |
+          histogram_quantile(0.95, sum by (le, instance) (rate(http_server_requests_seconds_bucket[5m]))) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: p95 latency > 1.5s
+          description: '{{ $labels.instance }} p95 latency exceeds 1.5s for 10 minutes.'
+
+      - alert: HikariNearSaturation
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Hikari pool > 80% saturated
+          description: '{{ $labels.instance }} is using more than 80% of its DB connections.'
+
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Postgres is down
+          description: postgres-exporter cannot reach the database.
+
+  - name: lunerie-loki
+    interval: 30s
+    rules:
+      - alert: ManyApplicationErrors
+        expr: |
+          (sum(rate({compose_service="backend", level="ERROR"}[5m])) > 0.5)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Backend logs many ERRORs
+          description: More than 0.5 errors/sec from the backend in the last 5 minutes.
