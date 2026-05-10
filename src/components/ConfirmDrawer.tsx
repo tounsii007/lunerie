@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Drawer } from 'vaul';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface BaseProps {
   open: boolean;
@@ -177,14 +177,33 @@ export function ConfirmDrawer(props: Props) {
                   padding: '14px 16px',
                   borderRadius: 14,
                   border: 'none',
-                  background: destructive ? '#ef4444' : 'var(--accent)',
+                  background: destructive
+                    ? 'linear-gradient(135deg, #ef4444, #fca5a5)'
+                    : 'linear-gradient(135deg, var(--accent), var(--accent-light))',
                   color: '#0f172a',
                   fontWeight: 800,
                   opacity: canSubmit ? 1 : 0.5,
                   cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  boxShadow: canSubmit
+                    ? destructive
+                      ? '0 12px 30px rgba(239, 68, 68, 0.35)'
+                      : '0 12px 30px var(--accent-glow)'
+                    : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  transition: 'box-shadow 0.22s var(--ease-out), opacity 0.22s var(--ease-out)',
                 }}
               >
-                {busy ? 'Working…' : confirmLabel}
+                {busy ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: 'spin 0.9s linear infinite' }} />
+                    Working…
+                  </>
+                ) : (
+                  confirmLabel
+                )}
               </button>
             </div>
           </div>
