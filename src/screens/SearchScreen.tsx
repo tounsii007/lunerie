@@ -13,7 +13,7 @@ const SUGGESTIONS = ['Tunisia', 'Patagonia', 'Waterfalls', 'Viewpoints', 'Medina
 
 export function SearchScreen() {
   const { t } = useI18n();
-  const { searchText, setSearchText, results, isEmpty, isLoading, total, fromCache } = usePlaceSearch();
+  const { searchText, setSearchText, results, isEmpty, isLoading, isPending, total, fromCache } = usePlaceSearch();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { openPlace } = useNavigation();
   const haptic = useHaptic();
@@ -210,7 +210,11 @@ export function SearchScreen() {
           items={[
             { label: 'Source', value: fromCache ? 'Cache' : 'Live', accent: fromCache ? 'var(--app-text-muted)' : 'var(--accent-light)' },
             { label: 'Results', value: `${total}` },
-            { label: 'Status', value: isLoading ? 'Scanning' : 'Ready' },
+            {
+              label: 'Status',
+              value: isPending ? 'Typing' : isLoading ? 'Scanning' : 'Ready',
+              accent: isPending || isLoading ? 'var(--accent-light)' : undefined,
+            },
           ]}
         />
 
