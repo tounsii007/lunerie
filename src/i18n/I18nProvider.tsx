@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo } from 'react';
 import { DEFAULT_LOCALE, type LocaleCode } from '@/constants/app';
-import { messages } from '@/i18n/messages';
+import { messages, type MessageKey } from '@/i18n/messages';
 import { isRtlLocale } from '@/utils/locale';
 
 type Vars = Record<string, string | number>;
@@ -15,8 +15,13 @@ interface I18nContextValue {
    * For pluralization, pass a `count` and provide a `<key>__plural` variant —
    * any non-1 count will pick the plural form. ICU MessageFormat is
    * intentionally avoided to keep the bundle tiny.
+   *
+   * Typing is intentionally widened to `string` so dynamic key lookups
+   * (e.g. `t(\`auth.password\${strengthLabel}\`)`) still compile, but
+   * MessageKey-typed call sites can be promoted opt-in via a cast or by
+   * importing the {@link MessageKey} union directly.
    */
-  t: (key: string, vars?: Vars) => string;
+  t: (key: MessageKey | (string & {}), vars?: Vars) => string;
   /** Locale-aware number formatting. Uses Intl.NumberFormat under the hood. */
   formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
   /** Locale-aware relative time. Negative values = past, positive = future. */
@@ -66,8 +71,12 @@ export function I18nProvider({ children, locale }: I18nProviderProps) {
 
     const t = (key: string, vars?: Vars): string => {
       const tryKey = selectKey(key, vars);
-      const localized = messages[locale]?.[tryKey] ?? messages[locale]?.[key];
-      const fallback = messages[DEFAULT_LOCALE]?.[tryKey] ?? messages[DEFAULT_LOCALE]?.[key] ?? key;
+      // The catalog's literal-key shape doesn't admit `string` indexing;
+      // cast through `Record<string, string | undefined>` for the lookup.
+      const localizedDict = messages[locale] as unknown as Record<string, string | undefined>;
+      const fallbackDict = messages[DEFAULT_LOCALE] as unknown as Record<string, string | undefined>;
+      const localized = localizedDict?.[tryKey] ?? localizedDict?.[key];
+      const fallback = fallbackDict?.[tryKey] ?? fallbackDict?.[key] ?? key;
       return format(localized ?? fallback, vars);
     };
 

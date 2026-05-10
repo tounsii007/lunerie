@@ -6,7 +6,9 @@ import { DEFAULT_LOCALE, type LocaleCode } from '@/constants/app';
 /** Resolve i18n key without going through the provider (class component). */
 function tStatic(key: string): string {
   const locale = (typeof document !== 'undefined' ? (document.documentElement.lang as LocaleCode) : DEFAULT_LOCALE);
-  return messages[locale]?.[key] ?? messages[DEFAULT_LOCALE]?.[key] ?? key;
+  const localized = messages[locale] as unknown as Record<string, string | undefined>;
+  const fallback = messages[DEFAULT_LOCALE] as unknown as Record<string, string | undefined>;
+  return localized?.[key] ?? fallback?.[key] ?? key;
 }
 
 interface ErrorBoundaryProps {

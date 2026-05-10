@@ -1,7 +1,5 @@
 import type { LocaleCode } from '@/constants/app';
 
-type MessageTree = Record<string, string>;
-
 /**
  * Source of truth for all user-facing copy. Keys are flat for type-safety and
  * grep-friendliness; nested namespacing is achieved via the dot convention
@@ -12,7 +10,7 @@ type MessageTree = Record<string, string>;
  *
  * Placeholders use `{name}` syntax — passed through `format(template, vars)`.
  */
-export const messages: Record<LocaleCode, MessageTree> = {
+export const messages = {
   en: {
     /* ---------------------- App / navigation ---------------------- */
     appName: 'Lunerie',
@@ -1617,4 +1615,16 @@ export const messages: Record<LocaleCode, MessageTree> = {
 
     source: 'Fontes',
   },
-};
+} satisfies Record<LocaleCode, Record<string, string>>;
+
+/**
+ * Authoritative key set — derived from the English catalog so the union covers
+ * every key including dot-namespaced and __plural variants. A typo at a call
+ * site (`t('auth.signIm')`) becomes a compile error rather than a silent
+ * fallback to the literal key string.
+ *
+ * Non-English locales may legitimately be a subset (the provider falls back to
+ * `en`), so this type is intentionally "keys present in `en`" rather than
+ * "intersection across all locales".
+ */
+export type MessageKey = keyof typeof messages.en;
