@@ -1,10 +1,11 @@
 export const tokens = {
   radius: {
-    xs: 14,
+    xs: 12,
     sm: 18,
     md: 24,
     lg: 32,
     xl: 40,
+    pill: 999,
   },
   space: {
     xs: 6,
@@ -16,27 +17,45 @@ export const tokens = {
   },
   shadow: {
     glow: '0 24px 80px rgba(15, 23, 42, 0.45)',
-    card: '0 18px 40px rgba(2, 8, 23, 0.24)',
+    card: '0 16px 38px rgba(2, 8, 23, 0.28), 0 2px 6px rgba(2, 8, 23, 0.18)',
+    cardHover: '0 28px 56px rgba(2, 8, 23, 0.42), 0 4px 10px rgba(2, 8, 23, 0.24)',
     soft: '0 10px 30px rgba(2, 8, 23, 0.18)',
+    ring: '0 0 0 1px rgba(255, 255, 255, 0.06) inset',
+  },
+  motion: {
+    easeOut: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    easeSpring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+    easeSmooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    duration: {
+      fast: 0.18,
+      base: 0.28,
+      slow: 0.45,
+    },
   },
   colors: {
     dark: {
       background: '#07111f',
       backgroundMuted: '#0d1a2b',
       surface: 'rgba(9, 18, 32, 0.74)',
+      surfaceStrong: 'rgba(13, 26, 43, 0.92)',
       elevated: 'rgba(15, 23, 42, 0.92)',
       border: 'rgba(255, 255, 255, 0.08)',
+      borderStrong: 'rgba(255, 255, 255, 0.14)',
       text: '#f8fafc',
       textMuted: '#cbd5e1',
+      textSubtle: 'rgba(203, 213, 225, 0.62)',
     },
     light: {
       background: '#f7f5ef',
       backgroundMuted: '#fffdf7',
       surface: 'rgba(255, 255, 255, 0.84)',
+      surfaceStrong: 'rgba(255, 255, 255, 0.95)',
       elevated: 'rgba(255, 255, 255, 0.96)',
       border: 'rgba(15, 23, 42, 0.08)',
+      borderStrong: 'rgba(15, 23, 42, 0.16)',
       text: '#0f172a',
       textMuted: '#475569',
+      textSubtle: 'rgba(71, 85, 105, 0.62)',
     },
   },
 } as const;

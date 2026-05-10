@@ -4,23 +4,44 @@
 
 :root {
   color-scheme: dark;
-  font-family: "Plus Jakarta Sans", "Sora", system-ui, sans-serif;
+  font-family: "Plus Jakarta Sans", "Sora", system-ui, -apple-system, sans-serif;
   --accent: #f97316;
   --accent-light: #fdba74;
   --accent-soft: rgba(249, 115, 22, 0.18);
   --accent-glow: rgba(249, 115, 22, 0.35);
+  --accent-strong: rgba(249, 115, 22, 0.55);
   --app-bg-image:
-    radial-gradient(circle at 20% 0%, rgba(56,189,248,0.18), transparent 32%),
-    radial-gradient(circle at 80% 10%, rgba(244,114,182,0.16), transparent 28%),
-    radial-gradient(circle at 50% 100%, rgba(249,115,22,0.14), transparent 36%),
+    radial-gradient(circle at 20% 0%, rgba(56, 189, 248, 0.18), transparent 32%),
+    radial-gradient(circle at 80% 10%, rgba(244, 114, 182, 0.16), transparent 28%),
+    radial-gradient(circle at 50% 100%, rgba(249, 115, 22, 0.14), transparent 36%),
     #06101d;
+
+  /* refined elevation, contrast, motion tokens */
+  --radius-xs: 12px;
+  --radius-sm: 18px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+  --radius-xl: 40px;
+  --radius-pill: 999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --shadow-glow: 0 24px 80px rgba(15, 23, 42, 0.45);
+  --shadow-card: 0 16px 38px rgba(2, 8, 23, 0.28), 0 2px 6px rgba(2, 8, 23, 0.18);
+  --shadow-card-hover: 0 28px 56px rgba(2, 8, 23, 0.42), 0 4px 10px rgba(2, 8, 23, 0.24);
+  --shadow-soft: 0 10px 30px rgba(2, 8, 23, 0.18);
+  --shadow-ring: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+
   background: var(--app-bg-image);
   color: #f8fafc;
   text-rendering: optimizeLegibility;
   font-synthesis: none;
+  font-feature-settings: "ss01", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background 0.45s ease;
+  transition: background 0.45s var(--ease-smooth);
 }
 
 [data-theme='light'] {
@@ -47,7 +68,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -56,6 +78,17 @@ button {
   background: none;
   color: inherit;
   cursor: pointer;
+  transition: transform 0.18s var(--ease-out), background 0.2s var(--ease-out),
+    color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 a {
@@ -68,16 +101,24 @@ img {
   max-width: 100%;
 }
 
-input::placeholder {
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+input::placeholder,
+textarea::placeholder {
   color: rgba(148, 163, 184, 0.62);
 }
 
-[data-theme='light'] input::placeholder {
+[data-theme='light'] input::placeholder,
+[data-theme='light'] textarea::placeholder {
   color: rgba(71, 85, 105, 0.62);
 }
 
 ::selection {
   background: var(--accent-soft);
+  color: var(--app-text);
 }
 
 :focus-visible {
@@ -124,17 +165,20 @@ input::placeholder {
   font-size: 14px;
   color: var(--app-text);
   user-select: none;
-  transition: background 0.12s ease, transform 0.12s ease;
+  transition: background 0.14s var(--ease-out), transform 0.14s var(--ease-out),
+    color 0.14s var(--ease-out);
 }
 
 [cmdk-item][data-selected='true'] {
   background: var(--accent-soft);
   color: var(--accent-light);
+  transform: translateX(2px);
 }
 
 [cmdk-item] svg {
   color: var(--app-text-muted);
   flex-shrink: 0;
+  transition: color 0.14s var(--ease-out);
 }
 
 [cmdk-item][data-selected='true'] svg {
@@ -152,10 +196,9 @@ input::placeholder {
   100% { background-position: 200% 0; }
 }
 
-.skeleton {
-  background: linear-gradient(90deg, var(--app-surface) 0%, var(--app-elevated) 50%, var(--app-surface) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); opacity: 1; }
+  50% { box-shadow: 0 0 0 8px transparent; opacity: 0.85; }
 }
 
 @keyframes float {
@@ -163,8 +206,71 @@ input::placeholder {
   50% { transform: translateY(-6px); }
 }
 
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--app-surface) 0%,
+    var(--app-elevated) 50%,
+    var(--app-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.8s linear infinite;
+}
+
 .float-animation {
   animation: float 4s ease-in-out infinite;
+}
+
+.breathe-animation {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.pulse-glow {
+  animation: pulse-glow 2.4s ease-out infinite;
+}
+
+/* Glass surface utility — used by cards, drawers, popovers */
+.glass {
+  background: rgba(9, 18, 32, 0.72);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-soft), var(--shadow-ring);
+}
+
+[data-theme='light'] .glass {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+/* Subtle hover lift for interactive cards */
+.lift {
+  transition: transform 0.32s var(--ease-out), box-shadow 0.32s var(--ease-out),
+    border-color 0.32s var(--ease-out);
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* Vaul drawer overlay polish */
@@ -175,7 +281,9 @@ input::placeholder {
 /* Make focus rings clearly visible on dark + light themes */
 button:focus-visible,
 [role='button']:focus-visible,
-a:focus-visible {
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 12px;
