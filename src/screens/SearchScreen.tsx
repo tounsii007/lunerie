@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, Search, Sparkles, X } from 'lucide-react';
 import { EmptyState, FeatureStrip, PlaceCard, ScreenContainer, SectionHeading, SpotlightPanel } from '@/components/AppShell';
@@ -17,6 +17,7 @@ export function SearchScreen() {
   const { toggleFavorite, isFavorite } = useFavorites();
   const { openPlace } = useNavigation();
   const haptic = useHaptic();
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -101,15 +102,33 @@ export function SearchScreen() {
                 gap: 12,
                 padding: '14px 16px',
                 borderRadius: 20,
-                border: '1px solid var(--app-border)',
+                border: focused
+                  ? '1px solid var(--accent)'
+                  : '1px solid var(--app-border)',
                 background: 'rgba(7,17,31,0.58)',
                 backdropFilter: 'blur(18px)',
+                WebkitBackdropFilter: 'blur(18px)',
+                boxShadow: focused ? '0 0 0 4px var(--accent-soft)' : 'none',
+                transition: 'border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out)',
               }}
             >
-              <Search size={18} color="var(--accent-light)" />
+              <motion.span
+                animate={focused ? { rotate: [0, -8, 8, 0] } : { rotate: 0 }}
+                transition={{ duration: 0.5 }}
+                style={{ display: 'inline-flex', color: 'var(--accent-light)' }}
+              >
+                <Search size={18} />
+              </motion.span>
               <input
                 id="lunerie-search-input"
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label={t('search')}
                 value={searchText}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder={t('searchPlaceholder')}
                 style={{
@@ -122,7 +141,11 @@ export function SearchScreen() {
                 }}
               />
               {searchText.length ? (
-                <button
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  whileTap={{ scale: 0.85 }}
                   onClick={() => {
                     setSearchText('');
                     haptic('light');
@@ -130,27 +153,38 @@ export function SearchScreen() {
                   aria-label="Clear search"
                   style={{
                     padding: 6,
-                    borderRadius: 8,
+                    borderRadius: 10,
                     color: 'var(--app-text-muted)',
+                    background: 'rgba(255,255,255,0.06)',
                   }}
                 >
                   <X size={16} />
-                </button>
+                </motion.button>
               ) : null}
             </div>
           </label>
 
           {!searchText.length ? (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
-              {SUGGESTIONS.map((suggestion) => (
-                <button
+            <div
+              role="list"
+              aria-label="Suggested searches"
+              style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}
+            >
+              {SUGGESTIONS.map((suggestion, index) => (
+                <motion.button
+                  role="listitem"
                   key={suggestion}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04 * index, duration: 0.3 }}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => {
                     setSearchText(suggestion);
                     haptic('light');
                   }}
                   style={{
-                    padding: '7px 12px',
+                    padding: '8px 14px',
                     borderRadius: 999,
                     fontSize: 12,
                     fontWeight: 600,
@@ -160,11 +194,13 @@ export function SearchScreen() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                   }}
                 >
                   <Sparkles size={11} color="var(--accent-light)" />
                   {suggestion}
-                </button>
+                </motion.button>
               ))}
             </div>
           ) : null}
@@ -219,7 +255,12 @@ export function SearchScreen() {
         ) : null}
         {isEmpty ? <EmptyState title="No matches found" body="Adjust your text, country or category filters." /> : null}
 
-        <section style={{ display: 'grid', gap: 18 }}>
+        <section
+          aria-label="Search results"
+          aria-busy={isLoading}
+          aria-live="polite"
+          style={{ display: 'grid', gap: 18 }}
+        >
           {results.map((place) => (
             <PlaceCard
               key={place.id}
