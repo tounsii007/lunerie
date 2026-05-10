@@ -2,6 +2,7 @@ package com.lunerie.api.web;
 
 import com.lunerie.api.application.auth.AuthService;
 import com.lunerie.api.application.auth.RateLimiter;
+import com.lunerie.api.common.BadRequestException;
 import com.lunerie.api.common.RequestContext;
 import com.lunerie.api.common.TooManyRequestsException;
 import com.lunerie.api.security.CurrentUser;
