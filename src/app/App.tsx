@@ -1,11 +1,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { WifiOff } from 'lucide-react';
+import { Download, RefreshCw, WifiOff, X } from 'lucide-react';
 import { AppProviders } from '@/app/providers';
 import { screenRegistry } from '@/app/screen-registry';
 import { BottomNavigation, ScreenContainer } from '@/components/AppShell';
 import { SkeletonHero, SkeletonPlaceCard } from '@/components/Skeleton';
 import { APP_NAME, SPLASH_DURATION_MS } from '@/constants/app';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useNavigation } from '@/state/navigation-context';
 import { usePreferences } from '@/state/preferences-context';
@@ -13,6 +14,198 @@ import { CountryDetailsScreen } from '@/screens/CountryDetailsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { PlaceDetailsScreen } from '@/screens/PlaceDetailsScreen';
 import { SplashScreen } from '@/screens/SplashScreen';
+import { applyServiceWorkerUpdate, onServiceWorkerUpdate } from '@/services/serviceWorker';
+
+const INSTALL_DISMISSED_KEY = 'lunerie/install-dismissed-at';
+const INSTALL_REMIND_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+function InstallChip() {
+  const { canPrompt, prompt } = useInstallPrompt();
+  const [hidden, setHidden] = useState(() => {
+    try {
+      const value = localStorage.getItem(INSTALL_DISMISSED_KEY);
+      if (!value) return false;
+      const dismissed = Number.parseInt(value, 10);
+      return Number.isFinite(dismissed) && Date.now() - dismissed < INSTALL_REMIND_AFTER_MS;
+    } catch {
+      return false;
+    }
+  });
+
+  if (!canPrompt || hidden) return null;
+
+  const handleInstall = async () => {
+    const outcome = await prompt();
+    if (outcome === 'accepted' || outcome === 'unavailable') {
+      setHidden(true);
+    } else {
+      localStorage.setItem(INSTALL_DISMISSED_KEY, Date.now().toString());
+      setHidden(true);
+    }
+  };
+
+  const handleDismiss = () => {
+    localStorage.setItem(INSTALL_DISMISSED_KEY, Date.now().toString());
+    setHidden(true);
+  };
+
+  return (
+    <motion.div
+      initial={{ y: 80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 80, opacity: 0 }}
+      transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+      role="region"
+      aria-label="Install Lunerie"
+      style={{
+        position: 'fixed',
+        insetInline: 16,
+        insetBlockEnd: 96,
+        zIndex: 38,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          pointerEvents: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 12px 10px 14px',
+          borderRadius: 999,
+          background: 'rgba(7, 17, 31, 0.9)',
+          backdropFilter: 'blur(24px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+          border: '1px solid var(--accent-soft)',
+          boxShadow: '0 18px 38px rgba(2, 8, 23, 0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+          color: 'var(--app-text)',
+          maxWidth: 'min(420px, 100%)',
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+            display: 'grid',
+            placeItems: 'center',
+            color: '#0f172a',
+            flexShrink: 0,
+            boxShadow: '0 8px 20px var(--accent-glow)',
+          }}
+        >
+          <Download size={16} strokeWidth={2.4} />
+        </span>
+        <span style={{ display: 'grid', gap: 1, minWidth: 0, flex: 1 }}>
+          <strong style={{ fontSize: 13, lineHeight: 1.2 }}>Install Lunerie</strong>
+          <span style={{ fontSize: 11, color: 'var(--app-text-muted)' }}>
+            Faster access, offline support, app icon.
+          </span>
+        </span>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleInstall}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 999,
+            background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+            color: '#0f172a',
+            fontWeight: 800,
+            fontSize: 12,
+            letterSpacing: '0.02em',
+            boxShadow: '0 6px 18px var(--accent-glow)',
+          }}
+        >
+          Install
+        </motion.button>
+        <button
+          onClick={handleDismiss}
+          aria-label="Dismiss install prompt"
+          style={{
+            padding: 6,
+            borderRadius: 999,
+            color: 'var(--app-text-muted)',
+            background: 'rgba(148,163,184,0.12)',
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function UpdateBanner() {
+  const [updateReady, setUpdateReady] = useState(false);
+
+  useEffect(() => {
+    return onServiceWorkerUpdate(() => setUpdateReady(true));
+  }, []);
+
+  if (!updateReady) return null;
+
+  return (
+    <motion.div
+      initial={{ y: -64, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+      role="status"
+      aria-live="polite"
+      style={{
+        position: 'fixed',
+        insetInline: 0,
+        top: 60,
+        zIndex: 95,
+        display: 'flex',
+        justifyContent: 'center',
+        paddingInline: 16,
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          pointerEvents: 'auto',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 14px 10px 16px',
+          borderRadius: 999,
+          background: 'rgba(7, 17, 31, 0.92)',
+          backdropFilter: 'blur(24px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+          border: '1px solid var(--accent-soft)',
+          boxShadow: '0 18px 38px rgba(2, 8, 23, 0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+          color: 'var(--accent-light)',
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: '0.04em',
+        }}
+      >
+        <RefreshCw size={14} />
+        New version ready
+        <button
+          onClick={applyServiceWorkerUpdate}
+          style={{
+            padding: '6px 12px',
+            borderRadius: 999,
+            background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+            color: '#0f172a',
+            fontWeight: 800,
+            fontSize: 11,
+            letterSpacing: '0.04em',
+            marginInlineStart: 4,
+          }}
+        >
+          Reload
+        </button>
+      </div>
+    </motion.div>
+  );
+}
 
 function OfflineBanner() {
   const online = useOnlineStatus();
@@ -224,6 +417,10 @@ function AppRuntime() {
       {selectedCountry ? <CountryDetailsScreen country={selectedCountry} /> : null}
       <BrandBadge />
       <OfflineBanner />
+      <UpdateBanner />
+      <AnimatePresence>
+        <InstallChip />
+      </AnimatePresence>
     </div>
   );
 }
