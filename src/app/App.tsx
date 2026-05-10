@@ -1,16 +1,70 @@
 import { Suspense, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { WifiOff } from 'lucide-react';
 import { AppProviders } from '@/app/providers';
 import { screenRegistry } from '@/app/screen-registry';
 import { BottomNavigation, ScreenContainer } from '@/components/AppShell';
 import { SkeletonHero, SkeletonPlaceCard } from '@/components/Skeleton';
 import { APP_NAME, SPLASH_DURATION_MS } from '@/constants/app';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useNavigation } from '@/state/navigation-context';
 import { usePreferences } from '@/state/preferences-context';
 import { CountryDetailsScreen } from '@/screens/CountryDetailsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { PlaceDetailsScreen } from '@/screens/PlaceDetailsScreen';
 import { SplashScreen } from '@/screens/SplashScreen';
+
+function OfflineBanner() {
+  const online = useOnlineStatus();
+  return (
+    <AnimatePresence>
+      {!online ? (
+        <motion.div
+          key="offline"
+          initial={{ y: -64, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -64, opacity: 0 }}
+          transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            insetInline: 0,
+            top: 0,
+            zIndex: 90,
+            display: 'flex',
+            justifyContent: 'center',
+            paddingTop: 12,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 16px',
+              borderRadius: 999,
+              background: 'rgba(2, 6, 23, 0.86)',
+              backdropFilter: 'blur(18px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+              border: '1px solid rgba(253, 186, 116, 0.35)',
+              color: '#fdba74',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              boxShadow: '0 16px 38px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}
+          >
+            <WifiOff size={14} />
+            You are offline — changes sync when you reconnect.
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
 
 function ScreenLoadingFallback() {
   return (
@@ -169,6 +223,7 @@ function AppRuntime() {
       {selectedPlace ? <PlaceDetailsScreen place={selectedPlace} /> : null}
       {selectedCountry ? <CountryDetailsScreen country={selectedCountry} /> : null}
       <BrandBadge />
+      <OfflineBanner />
     </div>
   );
 }
