@@ -214,6 +214,47 @@ export function SearchScreen() {
           ]}
         />
 
+        {searchText.length > 1 && !isLoading ? (
+          <motion.div
+            key={`summary-${total}-${searchText}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32 }}
+            role="status"
+            aria-live="polite"
+            style={{
+              display: 'inline-flex',
+              alignSelf: 'start',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 14px',
+              borderRadius: 999,
+              background: 'var(--app-surface)',
+              border: '1px solid var(--app-border)',
+              fontSize: 13,
+              color: 'var(--app-text-muted)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
+          >
+            <span style={{ color: 'var(--accent-light)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+              {total}
+            </span>
+            {total === 1 ? 'result' : 'results'} for
+            <span
+              style={{
+                fontWeight: 700,
+                color: 'var(--app-text)',
+                background: 'var(--accent-soft)',
+                padding: '2px 8px',
+                borderRadius: 8,
+              }}
+            >
+              {searchText.trim().slice(0, 32)}
+            </span>
+          </motion.div>
+        ) : null}
+
         {results.length ? (
           <section style={{ display: 'grid', gap: 14 }}>
             <SectionHeading
@@ -261,14 +302,20 @@ export function SearchScreen() {
           aria-live="polite"
           style={{ display: 'grid', gap: 18 }}
         >
-          {results.map((place) => (
-            <PlaceCard
+          {results.map((place, index) => (
+            <motion.div
               key={place.id}
-              place={place}
-              favorite={isFavorite(place.id)}
-              onFavorite={() => toggleFavorite(place.id)}
-              onOpen={() => openPlace(place)}
-            />
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.04 * Math.min(index, 5), duration: 0.32 }}
+            >
+              <PlaceCard
+                place={place}
+                favorite={isFavorite(place.id)}
+                onFavorite={() => toggleFavorite(place.id)}
+                onOpen={() => openPlace(place)}
+              />
+            </motion.div>
           ))}
         </section>
       </motion.div>
