@@ -5,7 +5,11 @@
  * - Bearer-token auth with automatic refresh via the /api/auth/refresh rotation flow.
  * - Tokens are persisted to localStorage so the SPA survives reloads.
  * - Network/parse errors surface as `LunerieApiError`.
+ * - Every request carries a W3C `traceparent` header so backend traces
+ *   inherit the frontend trace id (see {@link ../tracing}).
  */
+
+import { buildTraceparent } from '@/api/tracing';
 
 const TOKEN_STORAGE_KEY = 'lunerie/auth-tokens-v1';
 
@@ -171,6 +175,11 @@ async function rawJson<T>(path: string, options: RequestOptions = {}): Promise<T
   };
   if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
+  }
+  // W3C TraceContext propagation — backend's Micrometer Tracing picks this up
+  // and the resulting span becomes a child of the frontend trace.
+  if (!headers['traceparent']) {
+    headers['traceparent'] = buildTraceparent().header;
   }
 
   const tokens = tokenStore.tokens;
