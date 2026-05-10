@@ -30,10 +30,18 @@ export function FavoritesScreen() {
         style={{ display: 'grid', gap: 22 }}
       >
         <header style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent-light)' }}>
+          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent-light)', fontWeight: 700 }}>
             Your library
           </span>
-          <h1 style={{ fontFamily: '"Fraunces", serif', fontSize: 38, lineHeight: 1, letterSpacing: '-0.02em' }}>
+          <h1
+            style={{
+              fontFamily: '"Fraunces", serif',
+              fontSize: 38,
+              lineHeight: 1,
+              letterSpacing: '-0.022em',
+              fontWeight: 600,
+            }}
+          >
             {t('favorites')}
           </h1>
         </header>
@@ -55,9 +63,14 @@ export function FavoritesScreen() {
               className="scrollbar-hidden"
               style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}
             >
-              {recentViews.slice(0, 8).map((place) => (
-                <button
+              {recentViews.slice(0, 8).map((place, index) => (
+                <motion.button
                   key={place.id}
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.04 * index, duration: 0.32 }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => openPlace(place)}
                   style={{
                     width: 180,
@@ -67,18 +80,28 @@ export function FavoritesScreen() {
                     background: 'var(--app-surface)',
                     border: '1px solid var(--app-border)',
                     textAlign: 'left',
-                    boxShadow: '0 10px 30px rgba(2, 8, 23, 0.18)',
+                    boxShadow: '0 10px 30px rgba(2, 8, 23, 0.22)',
                   }}
                 >
-                  <img
-                    src={place.heroImage.url}
-                    alt={place.name}
-                    loading="lazy"
-                    decoding="async"
-                    style={{ width: '100%', height: 110, objectFit: 'cover' }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <img
+                      src={place.heroImage.url}
+                      alt={place.name}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }}
+                    />
+                    <div
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(180deg, transparent 60%, rgba(2,6,23,0.42))',
+                      }}
+                    />
+                  </div>
                   <div style={{ padding: 12, display: 'grid', gap: 4 }}>
-                    <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{place.name}</strong>
+                    <strong style={{ fontSize: 14, lineHeight: 1.22, letterSpacing: '-0.008em' }}>{place.name}</strong>
                     <span
                       style={{
                         fontSize: 11,
@@ -92,7 +115,7 @@ export function FavoritesScreen() {
                       {place.city}
                     </span>
                   </div>
-                </button>
+                </motion.button>
               ))}
             </div>
           </section>
@@ -128,23 +151,29 @@ export function FavoritesScreen() {
 
 function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
       style={{
         padding: 16,
         borderRadius: 20,
         background: 'var(--app-surface)',
         border: '1px solid var(--app-border)',
         backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
         display: 'grid',
         gap: 8,
+        boxShadow: 'var(--shadow-soft, 0 10px 30px rgba(2, 8, 23, 0.18))',
       }}
     >
       <span
         style={{
-          width: 28,
-          height: 28,
-          borderRadius: 9,
-          background: 'var(--accent-soft)',
+          width: 30,
+          height: 30,
+          borderRadius: 10,
+          background:
+            'radial-gradient(circle at 30% 30%, var(--accent-soft), transparent 80%), var(--accent-soft)',
           color: 'var(--accent)',
           display: 'grid',
           placeItems: 'center',
@@ -152,10 +181,27 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number
       >
         {icon}
       </span>
-      <strong style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' }}>{value}</strong>
-      <span style={{ fontSize: 11, color: 'var(--app-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+      <strong
+        style={{
+          fontSize: 26,
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
+      </strong>
+      <span
+        style={{
+          fontSize: 11,
+          color: 'var(--app-text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          fontWeight: 600,
+        }}
+      >
         {label}
       </span>
-    </div>
+    </motion.div>
   );
 }
