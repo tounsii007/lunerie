@@ -12,6 +12,7 @@ import {
   SectionHeading,
   SpotlightPanel,
 } from '@/components/AppShell';
+import { SkeletonCountryRail, SkeletonPlaceCard } from '@/components/Skeleton';
 import { useCountries } from '@/hooks/useCountries';
 import { useExplorePlaces } from '@/hooks/useExplorePlaces';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -145,13 +146,9 @@ export function ExploreScreen() {
           value={`${totalPlaces}`}
         />
         {isLoading && !items.length ? (
-          <div style={{ display: 'grid', gap: 18 }}>
+          <div style={{ display: 'grid', gap: 18 }} aria-busy="true">
             {[0, 1].map((index) => (
-              <div
-                key={index}
-                className="skeleton"
-                style={{ height: 380, borderRadius: 32, border: '1px solid var(--app-border)' }}
-              />
+              <SkeletonPlaceCard key={index} />
             ))}
           </div>
         ) : (
@@ -221,6 +218,8 @@ export function ExploreScreen() {
               </CarouselButton>
             </div>
           </div>
+        ) : isLoading ? (
+          <SkeletonCountryRail />
         ) : (
           <EmptyState title="No countries yet" body="The country catalog will appear here." />
         )}
