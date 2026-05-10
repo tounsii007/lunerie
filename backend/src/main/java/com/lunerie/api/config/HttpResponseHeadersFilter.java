@@ -36,6 +36,14 @@ public class HttpResponseHeadersFilter extends OncePerRequestFilter {
     private static final Pattern PUBLIC_CATALOG = Pattern.compile(
             "^/api(?:/v1)?/(countries|places|tags|recent-searches/trending)(/.*)?$");
 
+    /**
+     * Endpoints that always return per-user data — caching them in any shared
+     * proxy or even in the browser's bfcache could leak across users when
+     * tokens are rotated. {@code no-store} is a hard ban, no negotiation.
+     */
+    private static final Pattern PRIVATE_PATHS = Pattern.compile(
+            "^/api(?:/v1)?/(auth|users|favorites|recent-views|recent-searches|admin)(/.*)?$");
+
     private final long publicCatalogMaxAgeSeconds;
 
     public HttpResponseHeadersFilter(
@@ -60,6 +68,18 @@ public class HttpResponseHeadersFilter extends OncePerRequestFilter {
         }
         if (!response.containsHeader("Permissions-Policy")) {
             response.setHeader("Permissions-Policy", "geolocation=(self), microphone=(), camera=()");
+        }
+
+        // Per-user / mutating routes: hard-ban any caching to avoid cross-user leaks.
+        if (PRIVATE_PATHS.matcher(request.getRequestURI()).matches()) {
+            if (!response.containsHeader("Cache-Control")) {
+                response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+            }
+            if (!response.containsHeader("Pragma")) {
+                response.setHeader("Pragma", "no-cache");
+            }
+            chain.doFilter(request, response);
+            return;
         }
 
         // Cache-Control — only on safe verbs against public catalog routes,
