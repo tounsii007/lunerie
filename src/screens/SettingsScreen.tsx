@@ -651,6 +651,8 @@ function ToggleRow({
       onClick={() => onChange(!checked)}
       role="switch"
       aria-checked={checked}
+      aria-label={label}
+      data-state={checked ? 'On' : 'Off'}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -684,6 +686,9 @@ function ToggleRow({
           {description ? <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>{description}</span> : null}
         </div>
       </div>
+      {/* Visually-hidden state text — exposes 'On'/'Off' to textContent for tests
+          and to assistive tech as a fallback (aria-checked is the primary signal). */}
+      <span className="sr-only">{checked ? 'On' : 'Off'}</span>
       <span
         aria-hidden
         style={{
