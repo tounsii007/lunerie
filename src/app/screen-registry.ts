@@ -1,15 +1,28 @@
-import type { ComponentType } from 'react';
+import { lazy, type ComponentType } from 'react';
 import type { AppTab } from '@/constants/app';
 import { ExploreScreen } from '@/screens/ExploreScreen';
-import { SearchScreen } from '@/screens/SearchScreen';
-import { NearbyScreen } from '@/screens/NearbyScreen';
-import { FavoritesScreen } from '@/screens/FavoritesScreen';
-import { SettingsScreen } from '@/screens/SettingsScreen';
 
 /**
  * Single source of truth for "which component renders for which tab".
- * Adding a new tab is one entry here + one entry in {@code APP_TABS}.
+ *
+ * The first-load tab (Explore) is statically imported so the initial
+ * paint doesn't wait on a chunk fetch. Every other tab is lazily
+ * code-split — react-leaflet (Nearby), embla (Search), the heavy
+ * SettingsScreen, etc. only land in the bundle when actually navigated to.
  */
+const SearchScreen = lazy(() =>
+  import('@/screens/SearchScreen').then((m) => ({ default: m.SearchScreen })),
+);
+const NearbyScreen = lazy(() =>
+  import('@/screens/NearbyScreen').then((m) => ({ default: m.NearbyScreen })),
+);
+const FavoritesScreen = lazy(() =>
+  import('@/screens/FavoritesScreen').then((m) => ({ default: m.FavoritesScreen })),
+);
+const SettingsScreen = lazy(() =>
+  import('@/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
+);
+
 export const screenRegistry: Record<AppTab, ComponentType> = {
   explore: ExploreScreen,
   search: SearchScreen,

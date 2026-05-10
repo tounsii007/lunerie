@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AppProviders } from '@/app/providers';
 import { screenRegistry } from '@/app/screen-registry';
-import { BottomNavigation } from '@/components/AppShell';
+import { BottomNavigation, ScreenContainer } from '@/components/AppShell';
+import { SkeletonHero, SkeletonPlaceCard } from '@/components/Skeleton';
 import { APP_NAME, SPLASH_DURATION_MS } from '@/constants/app';
 import { useNavigation } from '@/state/navigation-context';
 import { usePreferences } from '@/state/preferences-context';
@@ -10,6 +11,80 @@ import { CountryDetailsScreen } from '@/screens/CountryDetailsScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { PlaceDetailsScreen } from '@/screens/PlaceDetailsScreen';
 import { SplashScreen } from '@/screens/SplashScreen';
+
+function ScreenLoadingFallback() {
+  return (
+    <ScreenContainer>
+      <div aria-busy="true" aria-live="polite" style={{ display: 'grid', gap: 18 }}>
+        <SkeletonHero />
+        <SkeletonPlaceCard />
+        <SkeletonPlaceCard />
+      </div>
+    </ScreenContainer>
+  );
+}
+
+function BrandBadge() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (!main) return;
+    const onScroll = () => setScrolled(main.scrollTop > 24);
+    main.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => main.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.18, duration: 0.45 }}
+      role="presentation"
+      aria-hidden
+      style={{
+        position: 'fixed',
+        top: 20,
+        insetInlineStart: 20,
+        padding: '10px 14px',
+        borderRadius: 999,
+        background: scrolled ? 'rgba(7,17,31,0.78)' : 'rgba(7,17,31,0.6)',
+        border: '1px solid var(--accent-soft)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
+        color: 'var(--accent-light)',
+        boxShadow: scrolled
+          ? '0 18px 48px rgba(2,8,23,0.42), inset 0 1px 0 rgba(255,255,255,0.06)'
+          : '0 12px 40px rgba(2,8,23,0.22)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        zIndex: 30,
+        transition: 'box-shadow 0.32s var(--ease-out), background 0.32s var(--ease-out)',
+      }}
+    >
+      <motion.span
+        animate={{
+          scale: [1, 1.2, 1],
+          boxShadow: ['0 0 12px var(--accent)', '0 0 18px var(--accent)', '0 0 12px var(--accent)'],
+        }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 999,
+          background: 'var(--accent)',
+        }}
+      />
+      {APP_NAME}
+    </motion.div>
+  );
+}
 
 function AppRuntime() {
   const { preferences } = usePreferences();
@@ -86,72 +161,15 @@ function AppRuntime() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
-        <ActiveScreen />
+        <Suspense fallback={<ScreenLoadingFallback />}>
+          <ActiveScreen />
+        </Suspense>
       </motion.div>
       <BottomNavigation />
       {selectedPlace ? <PlaceDetailsScreen place={selectedPlace} /> : null}
       {selectedCountry ? <CountryDetailsScreen country={selectedCountry} /> : null}
       <BrandBadge />
     </div>
-  );
-}
-
-function BrandBadge() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const main = document.querySelector('main');
-    if (!main) return;
-    const onScroll = () => setScrolled(main.scrollTop > 24);
-    main.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => main.removeEventListener('scroll', onScroll);
-  });
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.18, duration: 0.45 }}
-      role="presentation"
-      aria-hidden
-      style={{
-        position: 'fixed',
-        top: 20,
-        insetInlineStart: 20,
-        padding: '10px 14px',
-        borderRadius: 999,
-        background: scrolled ? 'rgba(7,17,31,0.78)' : 'rgba(7,17,31,0.6)',
-        border: '1px solid var(--accent-soft)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: '0.16em',
-        textTransform: 'uppercase',
-        color: 'var(--accent-light)',
-        boxShadow: scrolled
-          ? '0 18px 48px rgba(2,8,23,0.42), inset 0 1px 0 rgba(255,255,255,0.06)'
-          : '0 12px 40px rgba(2,8,23,0.22)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        zIndex: 30,
-        transition: 'box-shadow 0.32s var(--ease-out), background 0.32s var(--ease-out)',
-      }}
-    >
-      <motion.span
-        animate={{ scale: [1, 1.2, 1], boxShadow: ['0 0 12px var(--accent)', '0 0 18px var(--accent)', '0 0 12px var(--accent)'] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: 999,
-          background: 'var(--accent)',
-        }}
-      />
-      {APP_NAME}
-    </motion.div>
   );
 }
 
