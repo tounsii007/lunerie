@@ -6,6 +6,7 @@ import { screenRegistry } from '@/app/screen-registry';
 import { BottomNavigation, ScreenContainer } from '@/components/AppShell';
 import { SkeletonHero, SkeletonPlaceCard } from '@/components/Skeleton';
 import { APP_NAME, SPLASH_DURATION_MS } from '@/constants/app';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useNavigation } from '@/state/navigation-context';
@@ -20,6 +21,7 @@ const INSTALL_DISMISSED_KEY = 'lunerie/install-dismissed-at';
 const INSTALL_REMIND_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 function InstallChip() {
+  const { t } = useI18n();
   const { canPrompt, prompt } = useInstallPrompt();
   const [hidden, setHidden] = useState(() => {
     try {
@@ -56,7 +58,7 @@ function InstallChip() {
       exit={{ y: 80, opacity: 0 }}
       transition={{ type: 'spring', damping: 24, stiffness: 320 }}
       role="region"
-      aria-label="Install Lunerie"
+      aria-label={t('pwa.installTitle')}
       style={{
         position: 'fixed',
         insetInline: 16,
@@ -98,12 +100,12 @@ function InstallChip() {
             boxShadow: '0 8px 20px var(--accent-glow)',
           }}
         >
-          <Download size={16} strokeWidth={2.4} />
+          <Download size={16} strokeWidth={2.4} aria-hidden />
         </span>
         <span style={{ display: 'grid', gap: 1, minWidth: 0, flex: 1 }}>
-          <strong style={{ fontSize: 13, lineHeight: 1.2 }}>Install Lunerie</strong>
+          <strong style={{ fontSize: 13, lineHeight: 1.2 }}>{t('pwa.installTitle')}</strong>
           <span style={{ fontSize: 11, color: 'var(--app-text-muted)' }}>
-            Faster access, offline support, app icon.
+            {t('pwa.installBody')}
           </span>
         </span>
         <motion.button
@@ -120,11 +122,11 @@ function InstallChip() {
             boxShadow: '0 6px 18px var(--accent-glow)',
           }}
         >
-          Install
+          {t('pwa.installCta')}
         </motion.button>
         <button
           onClick={handleDismiss}
-          aria-label="Dismiss install prompt"
+          aria-label={t('pwa.installDismiss')}
           style={{
             padding: 6,
             borderRadius: 999,
@@ -140,6 +142,7 @@ function InstallChip() {
 }
 
 function UpdateBanner() {
+  const { t } = useI18n();
   const [updateReady, setUpdateReady] = useState(false);
 
   useEffect(() => {
@@ -185,8 +188,8 @@ function UpdateBanner() {
           letterSpacing: '0.04em',
         }}
       >
-        <RefreshCw size={14} />
-        New version ready
+        <RefreshCw size={14} aria-hidden />
+        {t('pwa.updateReady')}
         <button
           onClick={applyServiceWorkerUpdate}
           style={{
@@ -200,7 +203,7 @@ function UpdateBanner() {
             marginInlineStart: 4,
           }}
         >
-          Reload
+          {t('pwa.updateCta')}
         </button>
       </div>
     </motion.div>
@@ -208,6 +211,7 @@ function UpdateBanner() {
 }
 
 function OfflineBanner() {
+  const { t } = useI18n();
   const online = useOnlineStatus();
   return (
     <AnimatePresence>
@@ -250,8 +254,8 @@ function OfflineBanner() {
               boxShadow: '0 16px 38px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
             }}
           >
-            <WifiOff size={14} />
-            You are offline — changes sync when you reconnect.
+            <WifiOff size={14} aria-hidden />
+            {t('pwa.offline')}
           </div>
         </motion.div>
       ) : null}
@@ -334,6 +338,7 @@ function BrandBadge() {
 }
 
 function AppRuntime() {
+  const { t } = useI18n();
   const { preferences } = usePreferences();
   const { activeTab, selectedCountry, selectedPlace } = useNavigation();
   const [showSplash, setShowSplash] = useState(true);
@@ -384,7 +389,7 @@ function AppRuntime() {
           event.currentTarget.style.insetBlockStart = '-100px';
         }}
       >
-        Skip to content
+        {t('skipToContent')}
       </a>
 
       <div

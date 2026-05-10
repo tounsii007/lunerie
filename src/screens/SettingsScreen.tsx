@@ -125,8 +125,8 @@ export function SettingsScreen() {
               <Wand2 size={18} />
             </span>
             <span style={{ display: 'grid', gap: 2 }}>
-              <strong style={{ fontSize: 14 }}>Open command palette</strong>
-              <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>Quick actions, themes, places</span>
+              <strong style={{ fontSize: 14 }}>{t('openCommandPalette')}</strong>
+              <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>{t('commandPaletteHint')}</span>
             </span>
           </div>
           <kbd
@@ -143,13 +143,13 @@ export function SettingsScreen() {
           </kbd>
         </button>
 
-        <Card icon={<User size={16} />} title="Account" description={authUser ? `Signed in as ${authUser.email}` : 'Sign in to sync your favorites and recent views across devices.'}>
+        <Card icon={<User size={16} />} title={t('account.title')} description={authUser ? t('account.signedInAs', { email: authUser.email }) : t('account.signInBody')}>
           {authUser ? (
             <button
               onClick={async () => {
                 await authLogout();
                 haptic('light');
-                toast.success('Signed out');
+                toast.success(t('auth.signedOut'));
               }}
               style={{
                 display: 'flex',
@@ -167,8 +167,8 @@ export function SettingsScreen() {
               }}
             >
               <span style={{ display: 'grid', gap: 2 }}>
-                <strong style={{ fontSize: 14 }}>Sign out</strong>
-                <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>End the current session</span>
+                <strong style={{ fontSize: 14 }}>{t('auth.signOut')}</strong>
+                <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>{t('account.signOutDescription')}</span>
               </span>
               <LogOut size={16} />
             </button>
@@ -192,7 +192,7 @@ export function SettingsScreen() {
                 width: '100%',
               }}
             >
-              <span>Sign in / create account</span>
+              <span>{t('auth.signInPrompt')}</span>
               <LogIn size={16} />
             </button>
           )}

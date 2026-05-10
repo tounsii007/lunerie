@@ -1,5 +1,13 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { logger } from '@/logging/logger';
+import { messages } from '@/i18n/messages';
+import { DEFAULT_LOCALE, type LocaleCode } from '@/constants/app';
+
+/** Resolve i18n key without going through the provider (class component). */
+function tStatic(key: string): string {
+  const locale = (typeof document !== 'undefined' ? (document.documentElement.lang as LocaleCode) : DEFAULT_LOCALE);
+  return messages[locale]?.[key] ?? messages[DEFAULT_LOCALE]?.[key] ?? key;
+}
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -88,7 +96,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 fontWeight: 700,
               }}
             >
-              Unexpected error
+              {tStatic('errors.unexpected')}
             </p>
             <h1
               style={{
@@ -99,10 +107,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 lineHeight: 1.1,
               }}
             >
-              The app needs a clean refresh.
+              {tStatic('errors.cleanRefresh')}
             </h1>
             <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.6, fontSize: 14 }}>
-              A structured log entry was stored for diagnostics and future Sentry wiring.
+              {tStatic('errors.cleanRefreshBody')}
             </p>
             {this.state.message ? (
               <pre
@@ -137,7 +145,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   fontSize: 14,
                 }}
               >
-                Try again
+                {tStatic('errors.tryAgain')}
               </button>
               <button
                 onClick={this.handleReload}
@@ -152,7 +160,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   boxShadow: '0 12px 30px var(--accent-glow)',
                 }}
               >
-                Reload app
+                {tStatic('errors.reload')}
               </button>
             </div>
           </div>

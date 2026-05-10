@@ -4,6 +4,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Lock, LogIn, Mail, Sparkles, UserPlus
 import { toast } from 'sonner';
 import { useAuth } from '@/state/auth-context';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useI18n } from '@/i18n/I18nProvider';
 import { LunerieApiError } from '@/api/lunerie/lunerieClient';
 
 type Mode = 'login' | 'register';
@@ -30,6 +31,7 @@ function evaluatePassword(password: string): { strength: number; checks: Passwor
 }
 
 export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
+  const { t } = useI18n();
   const { login, register } = useAuth();
   const haptic = useHaptic();
   const [mode, setMode] = useState<Mode>('login');
@@ -47,10 +49,10 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
     try {
       if (mode === 'login') {
         await login(email.trim(), password);
-        toast.success(`Welcome back, ${email.split('@')[0]}`);
+        toast.success(t('auth.welcomeBackUser', { name: email.split('@')[0] }));
       } else {
         await register(email.trim(), password, displayName.trim() || email.split('@')[0]);
-        toast.success('Account created');
+        toast.success(t('auth.accountCreated'));
       }
       haptic('success');
       onAuthenticated?.();
@@ -63,7 +65,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
           toast.error(error.message);
         }
       } else {
-        toast.error('Something went wrong');
+        toast.error(t('errors.somethingWentWrong'));
       }
     } finally {
       setSubmitting(false);
@@ -71,9 +73,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
   };
 
   const passwordHint =
-    mode === 'register'
-      ? 'At least 12 characters with letters, digits and a symbol.'
-      : 'Use the password you registered with.';
+    mode === 'register' ? t('auth.passwordHintRegister') : t('auth.passwordHintLogin');
 
   return (
     <div
@@ -136,7 +136,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
             }}
           >
             <Sparkles size={12} />
-            Lunerie account
+            {t('auth.lunerieAccount')}
           </span>
           <h1
             style={{
@@ -147,12 +147,10 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
               fontWeight: 600,
             }}
           >
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            {mode === 'login' ? t('auth.welcomeBack') : t('auth.createYourAccount')}
           </h1>
           <p style={{ color: 'var(--app-text-muted)', fontSize: 13, lineHeight: 1.6 }}>
-            {mode === 'login'
-              ? 'Sign in to sync your favorites and recent views across devices.'
-              : 'Sync your discovery feed across devices and back up everything you love.'}
+            {mode === 'login' ? t('auth.signInBody') : t('auth.signUpBody')}
           </p>
         </header>
 
@@ -208,7 +206,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
                   />
                 ) : null}
                 {m === 'login' ? <LogIn size={14} /> : <UserPlus size={14} />}
-                {m === 'login' ? 'Sign in' : 'Sign up'}
+                {m === 'login' ? t('auth.signIn') : t('auth.signUp')}
               </button>
             );
           })}
@@ -216,7 +214,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
 
         <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
           {mode === 'register' ? (
-            <Field label="Display name" icon={<UserPlus size={16} />}>
+            <Field label={t('auth.displayName')} icon={<UserPlus size={16} />}>
               <input
                 type="text"
                 value={displayName}
@@ -228,7 +226,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
             </Field>
           ) : null}
 
-          <Field label="Email" icon={<Mail size={16} />}>
+          <Field label={t('auth.email')} icon={<Mail size={16} />}>
             <input
               type="email"
               value={email}
@@ -240,7 +238,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
             />
           </Field>
 
-          <Field label="Password" icon={<Lock size={16} />}>
+          <Field label={t('auth.password')} icon={<Lock size={16} />}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -255,7 +253,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 style={{
                   padding: 8,
                   borderRadius: 9,
@@ -266,7 +264,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
               </button>
             </div>
             {mode === 'register' && password.length > 0 ? (
-              <PasswordStrength evaluation={passwordEvaluation} />
+              <PasswordStrength evaluation={passwordEvaluation} t={t} />
             ) : (
               <span style={{ fontSize: 11, color: 'var(--app-text-muted)' }}>{passwordHint}</span>
             )}
@@ -297,13 +295,13 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
           >
             {submitting ? (
               <>
-                <Loader2 size={16} style={{ animation: 'spin 0.9s linear infinite' }} />
-                Working…
+                <Loader2 size={16} style={{ animation: 'spin 0.9s linear infinite' }} aria-hidden />
+                {t('working')}
               </>
             ) : (
               <>
-                {mode === 'login' ? 'Sign in' : 'Create account'}
-                <ArrowRight size={16} />
+                {mode === 'login' ? t('auth.signInCta') : t('auth.createAccountCta')}
+                <ArrowRight size={16} aria-hidden />
               </>
             )}
           </motion.button>
@@ -329,7 +327,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
               e.currentTarget.style.background = 'transparent';
             }}
           >
-            Continue without an account
+            {t('auth.continueWithoutAccount')}
           </button>
         ) : null}
       </motion.div>
@@ -377,11 +375,23 @@ function Field({
   );
 }
 
-function PasswordStrength({ evaluation }: { evaluation: { strength: number; checks: PasswordCheck[] } }) {
+function PasswordStrength({
+  evaluation,
+  t,
+}: {
+  evaluation: { strength: number; checks: PasswordCheck[] };
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
   const colors = ['#ef4444', '#f59e0b', '#facc15', '#84cc16', '#10b981'];
-  const labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong'];
+  const labelKeys = [
+    'auth.passwordVeryWeak',
+    'auth.passwordWeak',
+    'auth.passwordFair',
+    'auth.passwordGood',
+    'auth.passwordStrong',
+  ];
   const color = colors[evaluation.strength] ?? colors[0];
-  const label = labels[evaluation.strength] ?? labels[0];
+  const label = t(labelKeys[evaluation.strength] ?? labelKeys[0]);
 
   return (
     <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
@@ -421,7 +431,10 @@ function PasswordStrength({ evaluation }: { evaluation: { strength: number; chec
       >
         <span style={{ color, fontWeight: 700 }}>{label}</span>
         <span style={{ color: 'var(--app-text-muted)' }}>
-          {evaluation.checks.filter((c) => c.passed).length}/4 requirements met
+          {t('auth.requirementsMet', {
+            passed: evaluation.checks.filter((c) => c.passed).length,
+            total: 4,
+          })}
         </span>
       </div>
     </div>

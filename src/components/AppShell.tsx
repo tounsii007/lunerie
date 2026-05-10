@@ -27,6 +27,7 @@ const tabLabelKeys: Record<AppTab, string> = {
 };
 
 export function ScreenContainer({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLElement | null>(null);
   const [showTop, setShowTop] = useState(false);
 
@@ -69,7 +70,7 @@ export function ScreenContainer({ children }: { children: React.ReactNode }) {
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.92 }}
             onClick={scrollToTop}
-            aria-label="Scroll to top"
+            aria-label={t('scrollToTop')}
             style={{
               position: 'fixed',
               insetInlineEnd: 18,
@@ -338,6 +339,7 @@ export const PlaceCard = memo(function PlaceCard({
   onFavorite: () => void;
   favorite: boolean;
 }) {
+  const { t } = useI18n();
   const haptic = useHaptic();
 
   return (
@@ -440,9 +442,9 @@ export const PlaceCard = memo(function PlaceCard({
       <div style={{ padding: 18, display: 'grid', gap: 14, color: '#f8fafc' }}>
         <p style={{ color: 'rgba(203,213,225,0.86)', lineHeight: 1.6, fontSize: 14 }}>{place.description}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-          <MetricBadge label="Hot" value={`${place.popularity}%`} />
-          <MetricBadge label="Match" value={`${place.relevance}%`} />
-          <MetricBadge label="Year" value={new Date(place.updatedAt).getFullYear().toString()} />
+          <MetricBadge label={t('placeHot')} value={`${place.popularity}%`} />
+          <MetricBadge label={t('placeMatch')} value={`${place.relevance}%`} />
+          <MetricBadge label={t('placeYear')} value={new Date(place.updatedAt).getFullYear().toString()} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
           <div
@@ -455,8 +457,8 @@ export const PlaceCard = memo(function PlaceCard({
               fontWeight: 500,
             }}
           >
-            <ArrowUpRight size={16} />
-            <span>Open immersive details</span>
+            <ArrowUpRight size={16} aria-hidden />
+            <span>{t('openImmersive')}</span>
           </div>
           <motion.button
             whileTap={{ scale: 0.88 }}
@@ -465,7 +467,7 @@ export const PlaceCard = memo(function PlaceCard({
               onFavorite();
               haptic('light');
             }}
-            aria-label="Toggle favorite"
+            aria-label={t('save')}
             aria-pressed={favorite}
             style={{
               padding: 12,
@@ -660,6 +662,7 @@ export function OverlayFrame({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const sectionRef = useRef<HTMLElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const titleId = useId();
@@ -781,7 +784,7 @@ export function OverlayFrame({
             <h2 id={titleId} style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>{title}</h2>
             <button
               onClick={onClose}
-              aria-label="Close dialog"
+              aria-label={t('close')}
               style={{
                 padding: '8px 14px',
                 borderRadius: 999,
@@ -791,7 +794,7 @@ export function OverlayFrame({
                 fontWeight: 600,
               }}
             >
-              Close
+              {t('close')}
             </button>
           </div>
           {children}

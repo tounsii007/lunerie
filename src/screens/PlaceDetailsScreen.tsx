@@ -26,7 +26,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
   const handleSave = () => {
     toggleFavorite(place.id);
     haptic('success');
-    toast.success(saved ? 'Removed from favorites' : 'Added to favorites', { duration: 1600 });
+    toast.success(saved ? t('removedFromFavorites') : t('addedToFavorites'), { duration: 1600 });
   };
 
   const handleShare = async () => {
