@@ -108,6 +108,25 @@ management:
     metrics:
       export:
         enabled: true
+  # Distributed tracing → OTLP (Tempo / Jaeger / OTel collector)
+  tracing:
+    enabled: ${LUNERIE_TRACING_ENABLED:true}
+    sampling:
+      probability: ${LUNERIE_TRACING_SAMPLE_RATE:1.0}
+    propagation:
+      type: ${LUNERIE_TRACING_PROPAGATION:W3C}
+  otlp:
+    tracing:
+      endpoint: ${LUNERIE_OTLP_ENDPOINT:http://otel-collector:4318/v1/traces}
+      compression: gzip
+      timeout: 10s
+      transport: http
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+      service.version: ${lunerie.api.version:1.0.0}
+      service.instance.id: ${LUNERIE_INSTANCE_ID:local}
+      deployment.environment: ${LUNERIE_ENV:${spring.profiles.active:default}}
 
 springdoc:
   api-docs:
@@ -124,7 +143,9 @@ logging:
     org.springframework.web: ${LOG_LEVEL_WEB:INFO}
     org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
   pattern:
-    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{requestId:-}] [%X{userId:-}] %-40.40logger{39} : %m%n'
+    # %X{traceId} / %X{spanId} are populated by Micrometer Tracing → Spring Boot's
+    # default contributors. Empty when tracing is disabled.
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{traceId:-}/%X{spanId:-}] [%X{requestId:-}] [%X{userId:-}] %-40.40logger{39} : %m%n'
 
 # -------------------------------------------------------------------------
 # Lunerie-specific configuration

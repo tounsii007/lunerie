@@ -4,6 +4,7 @@ import com.lunerie.api.common.NotFoundException;
 import com.lunerie.api.domain.place.Place;
 import com.lunerie.api.domain.place.PlaceCategory;
 import com.lunerie.api.domain.place.PlaceRepository;
+import io.micrometer.observation.annotation.Observed;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -47,6 +48,8 @@ public class PlaceService {
         return primeSummary(placeRepository.findAll(pageable));
     }
 
+    @Observed(name = "lunerie.places.search", contextualName = "places.search",
+            lowCardinalityKeyValues = {"flow", "search"})
     public Page<Place> search(String query, SearchCriteria criteria, Pageable pageable) {
         if (query == null || query.isBlank()) {
             return list(criteria, pageable);

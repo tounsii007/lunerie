@@ -108,6 +108,27 @@
             <version>${logstash-logback-encoder.version}</version>
         </dependency>
 
+        <!--
+            Distributed tracing via Micrometer Tracing → OpenTelemetry → OTLP.
+            Spring Boot's Observation API (auto-applied to controllers, repos, RestClient,
+            scheduled tasks, etc.) hands every observation to micrometer-tracing-bridge-otel,
+            which forwards to the OTel SDK; opentelemetry-exporter-otlp ships spans to the
+            collector configured by management.otlp.tracing.endpoint.
+        -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
+        <!-- Annotation-driven custom spans: @Observed on any method becomes a span. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Rate limiting -->
         <dependency>
             <groupId>com.bucket4j</groupId>
