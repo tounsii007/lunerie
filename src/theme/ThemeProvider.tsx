@@ -73,6 +73,10 @@ export function ThemeProvider({
     root.style.setProperty('--app-text', palette.text);
     root.style.setProperty('--app-text-muted', palette.textMuted);
     root.style.setProperty('--app-text-subtle', palette.textSubtle);
+    root.style.setProperty('--app-chip-bg', palette.chipBg);
+    root.style.setProperty('--app-chip-bg-strong', palette.chipBgStrong);
+    root.style.setProperty('--app-chip-shadow', palette.chipShadow);
+    root.style.setProperty('--app-overlay-scrim', palette.overlayScrim);
 
     root.style.setProperty('--accent', accent.primary);
     root.style.setProperty('--accent-light', accent.light);

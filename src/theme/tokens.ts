@@ -44,6 +44,12 @@ export const tokens = {
       text: '#f8fafc',
       textMuted: '#cbd5e1',
       textSubtle: 'rgba(203, 213, 225, 0.62)',
+      // Floating chip / banner surface — dense, blurred glass over the page background.
+      chipBg: 'rgba(7, 17, 31, 0.78)',
+      chipBgStrong: 'rgba(7, 17, 31, 0.9)',
+      chipShadow: '0 18px 38px rgba(2, 8, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+      // Modal backdrop — used by OverlayFrame, ConfirmDrawer, CommandPalette.
+      overlayScrim: 'rgba(2, 6, 23, 0.78)',
     },
     light: {
       background: '#f7f5ef',
@@ -56,6 +62,12 @@ export const tokens = {
       text: '#0f172a',
       textMuted: '#475569',
       textSubtle: 'rgba(71, 85, 105, 0.62)',
+      // Light mode chips: nearly-opaque cream with a subtle warm border.
+      chipBg: 'rgba(255, 253, 247, 0.88)',
+      chipBgStrong: 'rgba(255, 253, 247, 0.96)',
+      chipShadow: '0 18px 38px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+      // Light mode overlay scrim sits on a cream page; keep it warm-tinted.
+      overlayScrim: 'rgba(15, 23, 42, 0.42)',
     },
   },
 } as const;

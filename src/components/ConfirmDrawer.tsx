@@ -72,8 +72,9 @@ export function ConfirmDrawer(props: Props) {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(2, 6, 23, 0.7)',
+            background: 'var(--app-overlay-scrim)',
             backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             zIndex: 80,
           }}
         />
