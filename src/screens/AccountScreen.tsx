@@ -65,14 +65,65 @@ export function AccountScreen() {
         transition={{ duration: 0.3 }}
         style={{ display: 'grid', gap: 22 }}
       >
-        <header style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent-light)' }}>
-            Your account
-          </span>
-          <h1 style={{ fontFamily: '"Fraunces", serif', fontSize: 38, lineHeight: 1, letterSpacing: '-0.02em' }}>
-            {user.displayName}
-          </h1>
-          <p style={{ color: 'var(--app-text-muted)' }}>{user.email}</p>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div
+            aria-hidden
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 22,
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+              color: '#0f172a',
+              fontSize: 26,
+              fontWeight: 800,
+              display: 'grid',
+              placeItems: 'center',
+              boxShadow: '0 14px 32px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.32)',
+              flexShrink: 0,
+              letterSpacing: '-0.02em',
+              fontFamily: '"Fraunces", serif',
+            }}
+          >
+            {user.displayName.trim().slice(0, 1).toUpperCase() || '·'}
+          </div>
+          <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+            <span
+              style={{
+                fontSize: 11,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                color: 'var(--accent-light)',
+                fontWeight: 700,
+              }}
+            >
+              Your account
+            </span>
+            <h1
+              style={{
+                fontFamily: '"Fraunces", serif',
+                fontSize: 30,
+                lineHeight: 1.05,
+                letterSpacing: '-0.022em',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {user.displayName}
+            </h1>
+            <p
+              style={{
+                color: 'var(--app-text-muted)',
+                fontSize: 13,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {user.email}
+            </p>
+          </div>
         </header>
 
         <Card icon={<User size={16} />} title="Session">
@@ -177,31 +228,43 @@ function Row({
   danger?: boolean;
 }) {
   return (
-    <button
+    <motion.button
+      whileHover={{ x: 2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', damping: 26, stiffness: 360 }}
       onClick={onClick}
       style={{
         textAlign: 'left',
         padding: '14px 16px',
         borderRadius: 14,
         border: danger ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--app-border)',
-        background: danger ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+        background: danger
+          ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.04))'
+          : 'transparent',
         color: danger ? '#fca5a5' : 'var(--app-text)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 12,
         width: '100%',
+        transition: 'background 0.22s var(--ease-out)',
       }}
     >
       <span style={{ display: 'grid', gap: 2 }}>
         <strong style={{ fontSize: 14 }}>{title}</strong>
         {description ? (
-          <span style={{ fontSize: 12, color: danger ? 'rgba(252,165,165,0.78)' : 'var(--app-text-muted)' }}>
+          <span
+            style={{
+              fontSize: 12,
+              color: danger ? 'rgba(252,165,165,0.82)' : 'var(--app-text-muted)',
+              lineHeight: 1.5,
+            }}
+          >
             {description}
           </span>
         ) : null}
       </span>
-      {iconRight ? <span style={{ color: 'inherit' }}>{iconRight}</span> : null}
-    </button>
+      {iconRight ? <span style={{ color: 'inherit', flexShrink: 0 }}>{iconRight}</span> : null}
+    </motion.button>
   );
 }
