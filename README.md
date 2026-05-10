@@ -12,7 +12,7 @@ This monorepo ships:
 .
 ├── src/                          # Frontend (Vite + React 19)
 ├── backend/                      # Spring Boot API
-├── ops/                          # nginx, loki, promtail, grafana, prometheus configs
+├── ops/                          # nginx, loki, promtail, grafana, prometheus, tempo, otel-collector configs
 ├── scripts/                      # smoke / health / backup / restore / jwt-secret
 ├── docker-compose.yml            # base stack
 ├── docker-compose.override.yml   # local dev (Adminer, debug logs)
@@ -38,15 +38,17 @@ make up
 make smoke
 ```
 
-| Service     | URL                                            |
-|-------------|-------------------------------------------------|
-| API gateway | http://localhost:8080                           |
-| Swagger UI  | http://localhost:8080/swagger-ui.html           |
-| Adminer     | http://localhost:8081                           |
-| Grafana     | http://localhost:3000 (admin / admin)           |
-| Prometheus  | http://localhost:9090                           |
-| Loki        | http://localhost:3100                           |
-| Frontend    | `npm run dev` → http://localhost:5173           |
+| Service        | URL                                             |
+|----------------|-------------------------------------------------|
+| API gateway    | http://localhost:8080                           |
+| Swagger UI     | http://localhost:8080/swagger-ui.html           |
+| Adminer        | http://localhost:8081                           |
+| Grafana        | http://localhost:3000 (admin / admin)           |
+| Prometheus     | http://localhost:9090                           |
+| Loki           | http://localhost:3100                           |
+| Tempo          | http://localhost:3200                           |
+| OTel collector | http://localhost:4318 (OTLP HTTP)               |
+| Frontend       | `npm run dev` → http://localhost:5173           |
 
 ---
 
@@ -146,7 +148,42 @@ await lunerie.favorites.add(placeId);
 await lunerie.recentSearches.record('waterfalls', resultCount);
 ```
 
-Bearer auth + automatic refresh-token rotation are handled inside the client.
+Bearer auth + automatic refresh-token rotation are handled inside the client. Every outbound request also carries a W3C `traceparent` header (see [`src/api/tracing.ts`](src/api/tracing.ts)) so backend traces inherit the frontend trace id.
+
+### PWA
+
+The frontend ships as an installable Progressive Web App:
+
+| Capability            | Where                                                                |
+|-----------------------|----------------------------------------------------------------------|
+| Manifest              | [`public/manifest.webmanifest`](public/manifest.webmanifest)         |
+| Icons                 | `favicon.svg`, `icon-maskable.svg`, `icon-monochrome.svg`, `apple-touch-icon.svg` |
+| Service worker        | [`public/sw.js`](public/sw.js) — four named caches per resource type |
+| Offline fallback      | [`public/offline.html`](public/offline.html)                         |
+| Install prompt UI     | `useInstallPrompt` hook + `InstallChip` component in [`src/app/App.tsx`](src/app/App.tsx) |
+| Update notification   | `onServiceWorkerUpdate` + `UpdateBanner` ("New version ready · Reload") |
+| Offline status banner | `useOnlineStatus` hook + `OfflineBanner` component                   |
+| App shortcuts         | Manifest declares Explore / Search / Nearby / Favorites jumpers      |
+
+The service worker uses **stale-while-revalidate** for hashed Vite assets and external API hosts, **cache-first with eviction (60 entries / 24h TTL)** for images, and **network-first with offline.html fallback** for navigations. Bumping `CACHE_VERSION` in `sw.js` invalidates everything safely.
+
+### Internationalization
+
+Six locales (`en`, `de`, `fr`, `es`, `pt`, `ar`) covering ~200 keys each, including `auth.*`, `account.*`, `pwa.*`, `errors.*`, `geoState*`, search status, settings descriptions, and validation messages.
+
+```tsx
+const { t, formatNumber, formatRelativeTime, formatDate } = useI18n();
+
+t('auth.welcomeBackUser', { name: 'Aisha' });
+t('resultsForTerm', { count: results.length, term: query });
+//   → "12 results for tunisia"  (count !== 1 picks resultsForTerm__plural)
+
+formatNumber(1234567);                        // "1,234,567" (locale-aware)
+formatRelativeTime(-3, 'hour');               // "3 hours ago" / "il y a 3 heures"
+formatDate(place.updatedAt, { dateStyle: 'long' });
+```
+
+The provider auto-sets `<html lang>` + `dir="rtl"` for Arabic.
 
 ---
 
@@ -166,9 +203,37 @@ make up-prod
 
 ## Observability
 
-- Logs: every container → Promtail → Loki. Backend logs are structured JSON; `requestId` and `userId` are exposed as Loki labels for fast filtering.
-- Metrics: Spring Actuator → Prometheus. Default Grafana dashboard "Lunerie Overview" plots requests/sec, p95 latency, JVM heap, Hikari pool, error counts, and a live log panel.
-- Traces: not yet wired — OpenTelemetry exporter can drop straight into the Spring Boot config when needed.
+Three pillars, all bidirectionally cross-linked in Grafana.
+
+- **Logs** — every container → Promtail → Loki. Backend logs are structured JSON; `requestId`, `userId`, `traceId`, `spanId` are exposed as Loki fields. The Loki datasource has a derived field that turns any `traceId` in a log line into a clickable "View trace" button that jumps straight to Tempo.
+- **Metrics** — Spring Actuator → Prometheus. Default Grafana dashboard "Lunerie Overview" plots requests/sec, p95 latency, JVM heap, Hikari pool, error counts, plus a live log panel. Cache hit-rates are recorded per Caffeine cache. Prometheus has `--web.enable-remote-write-receiver` + `exemplar-storage` enabled so exemplars on histograms link directly to the matching trace.
+- **Traces** — Spring Boot Observation API → Micrometer Tracing → OpenTelemetry SDK → OTLP → OTel collector → Tempo. The frontend emits W3C `traceparent` on every API call (see [`src/api/tracing.ts`](src/api/tracing.ts)) so a single trace spans browser → controller → JPA → DB. Custom spans are declared with `@Observed` (see `AuthService.register`, `AuthService.login`, `PlaceService.search`).
+
+Tracing pipeline:
+
+```
+SPA (W3C traceparent) ──▶ backend (Micrometer Tracing → OTLP HTTP)
+                                   │
+                                   ▼
+                       OTel collector (memory_limiter → batch)
+                                   │
+                                   ▼
+                                Tempo  ──▶  Grafana (trace view)
+                                   │
+                                   └──▶ Prometheus (span-metrics remote_write)
+```
+
+Toggle / tune via env vars:
+
+| Env                            | Default                                  | Purpose                                  |
+|--------------------------------|------------------------------------------|------------------------------------------|
+| `LUNERIE_TRACING_ENABLED`      | `true`                                   | Master switch                            |
+| `LUNERIE_TRACING_SAMPLE_RATE`  | `1.0`                                    | Probability sampler                      |
+| `LUNERIE_OTLP_ENDPOINT`        | `http://otel-collector:4318/v1/traces`   | Where to ship spans                      |
+| `LUNERIE_TRACING_PROPAGATION`  | `W3C`                                    | `W3C` / `B3` / `B3_MULTI`                |
+| `LUNERIE_ENV`                  | `docker`                                 | Lands as `deployment.environment` attr   |
+
+In Grafana: **Tempo → click span → "Logs for this span"** to drop into Loki at the matching time window, or **"p95 latency by service"** to see span-derived latency metrics. Reverse direction works too: any Loki log line with a `traceId` carries a "View trace" button.
 
 ---
 
