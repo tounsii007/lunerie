@@ -64,7 +64,12 @@ server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
   forward-headers-strategy: native
+  # Cap request URL + header sizes to keep parsers cheap and limit DoS surface.
+  max-http-request-header-size: 16KB
   tomcat:
+    # Limit body size for non-multipart POST/PUT/PATCH; uploads use the multipart limits below.
+    max-http-form-post-size: 1MB
+    max-swallow-size: 1MB
     remoteip:
       # Only trust X-Forwarded-* from Docker bridge networks + private RFC1918 ranges.
       # The Docker Compose `lunerie-net` is a bridge network and uses 172.x.x.x by default.
@@ -153,6 +158,10 @@ lunerie:
       same-site: ${LUNERIE_COOKIE_SAME_SITE:Strict}
   observability:
     slow-request-threshold-ms: ${LUNERIE_SLOW_REQ_THRESHOLD_MS:1500}
+  cache:
+    # Default Cache-Control max-age (seconds) emitted by HttpResponseHeadersFilter
+    # for unauthenticated GETs against public catalog endpoints.
+    public-catalog-max-age-seconds: ${LUNERIE_CACHE_PUBLIC_MAX_AGE:60}
   admin:
     email:        ${LUNERIE_ADMIN_EMAIL:}
     password:     ${LUNERIE_ADMIN_PASSWORD:}
