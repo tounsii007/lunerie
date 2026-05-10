@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { Heart, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Heart, MapPin, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OverlayFrame } from '@/components/AppShell';
 import { PlacesMap } from '@/components/PlacesMap';
@@ -16,6 +17,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
   const { isFavorite, toggleFavorite, pushRecentView } = useFavorites();
   const haptic = useHaptic();
   const saved = isFavorite(place.id);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     pushRecentView(place);
@@ -40,18 +42,35 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
   return (
     <OverlayFrame title={place.name} onClose={closeOverlay}>
       <div style={{ position: 'relative' }}>
-        <img
+        <div
+          aria-hidden
+          className={imageLoaded ? '' : 'skeleton'}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: imageLoaded ? 'transparent' : 'var(--app-surface)',
+            transition: 'background 0.4s var(--ease-out)',
+          }}
+        />
+        <motion.img
+          key={place.heroImage.url}
           src={place.heroImage.url}
           alt={place.name}
           loading="eager"
           decoding="async"
-          style={{ width: '100%', height: 280, objectFit: 'cover' }}
+          onLoad={() => setImageLoaded(true)}
+          initial={{ opacity: 0, scale: 1.06 }}
+          animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 1.06 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: '100%', height: 280, objectFit: 'cover', display: 'block' }}
         />
         <div
+          aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(180deg, transparent 50%, rgba(2,6,23,0.7))',
+            background:
+              'linear-gradient(180deg, transparent 38%, rgba(2,6,23,0.72) 96%)',
           }}
         />
         <div
@@ -73,9 +92,11 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
               background: 'rgba(15,23,42,0.6)',
               border: '1px solid rgba(255,255,255,0.16)',
               backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
               fontSize: 12,
               fontWeight: 600,
               color: '#fff',
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
             {place.popularity}% hot
@@ -91,23 +112,43 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
               color: 'var(--accent-light)',
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
             {place.relevance}% match
           </span>
         </div>
       </div>
-      <div style={{ padding: 20, display: 'grid', gap: 18 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+        style={{ padding: 20, display: 'grid', gap: 18 }}
+      >
         <div>
-          <p style={{ color: 'var(--accent-light)', marginBottom: 10, fontWeight: 600, fontSize: 14 }}>
+          <p
+            style={{
+              color: 'var(--accent-light)',
+              marginBottom: 10,
+              fontWeight: 600,
+              fontSize: 14,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <MapPin size={14} />
             {place.city}, {place.countryName}
           </p>
           <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.7, fontSize: 14 }}>{place.description}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {place.categories.map((category) => (
-            <span
+          {place.categories.map((category, index) => (
+            <motion.span
               key={category}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 + 0.04 * index, duration: 0.32 }}
               style={{
                 padding: '6px 12px',
                 borderRadius: 999,
@@ -120,7 +161,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
               }}
             >
               {category.replace('_', ' ')}
-            </span>
+            </motion.span>
           ))}
         </div>
         <div
@@ -130,23 +171,55 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
             background: 'var(--app-surface)',
             border: '1px solid var(--app-border)',
             display: 'grid',
-            gap: 10,
+            gap: 12,
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
           }}
         >
           <div>
-            <strong style={{ fontSize: 13, color: 'var(--app-text-muted)' }}>{t('coordinates')}</strong>
-            <p style={{ fontVariantNumeric: 'tabular-nums', fontSize: 14, marginTop: 4 }}>
+            <strong
+              style={{
+                fontSize: 11,
+                color: 'var(--app-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                fontWeight: 700,
+              }}
+            >
+              {t('coordinates')}
+            </strong>
+            <p style={{ fontVariantNumeric: 'tabular-nums', fontSize: 14, marginTop: 6 }}>
               {place.coordinates.latitude.toFixed(4)}, {place.coordinates.longitude.toFixed(4)}
             </p>
           </div>
+          <div
+            style={{
+              height: 1,
+              background: 'var(--app-border)',
+              margin: '2px 0',
+            }}
+            aria-hidden
+          />
           <div>
-            <strong style={{ fontSize: 13, color: 'var(--app-text-muted)' }}>{t('sourceLabel')}</strong>
-            <p style={{ fontSize: 13, marginTop: 4, color: 'var(--app-text)' }}>{place.sourceAttribution}</p>
+            <strong
+              style={{
+                fontSize: 11,
+                color: 'var(--app-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                fontWeight: 700,
+              }}
+            >
+              {t('sourceLabel')}
+            </strong>
+            <p style={{ fontSize: 13, marginTop: 6, color: 'var(--app-text)' }}>{place.sourceAttribution}</p>
           </div>
         </div>
         <PlacesMap places={[place]} height={220} />
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
             onClick={handleSave}
             aria-label={saved ? t('saved') : t('save')}
             aria-pressed={saved}
@@ -155,7 +228,9 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
               minWidth: 140,
               padding: '16px 18px',
               borderRadius: 18,
-              background: saved ? 'var(--accent)' : 'var(--accent-soft)',
+              background: saved
+                ? 'linear-gradient(135deg, var(--accent), var(--accent-light))'
+                : 'var(--accent-soft)',
               color: saved ? '#0f172a' : 'var(--accent-light)',
               fontWeight: 700,
               fontSize: 14,
@@ -164,13 +239,22 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
               justifyContent: 'center',
               gap: 8,
               border: '1px solid var(--accent)',
-              transition: 'all 0.18s ease',
+              boxShadow: saved ? '0 12px 28px var(--accent-glow)' : 'none',
+              transition: 'background 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out), color 0.22s var(--ease-out)',
             }}
           >
-            <Heart size={16} fill={saved ? '#0f172a' : 'transparent'} />
+            <motion.span
+              animate={saved ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+              transition={{ duration: 0.36 }}
+              style={{ display: 'inline-flex' }}
+            >
+              <Heart size={16} fill={saved ? '#0f172a' : 'transparent'} />
+            </motion.span>
             {saved ? t('saved') : t('save')}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
             onClick={handleShare}
             aria-label={t('share')}
             style={{
@@ -187,13 +271,15 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
             }}
           >
             <Share2 size={16} />
             {t('share')}
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
     </OverlayFrame>
   );
 }
