@@ -5,6 +5,7 @@ import com.lunerie.api.common.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,11 +25,12 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         ApiError body = ApiError.of(
-                HttpStatus.FORBIDDEN.value(),
-                "ACCESS_DENIED",
-                "Access denied",
-                request.getRequestURI()
-        );
+                        HttpStatus.FORBIDDEN.value(),
+                        "ACCESS_DENIED",
+                        "Access denied",
+                        request.getRequestURI())
+                .withMethod(request.getMethod())
+                .withRequestId(MDC.get("requestId"));
         objectMapper.writeValue(response.getOutputStream(), body);
     }
 }
