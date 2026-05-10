@@ -24,6 +24,8 @@ export class LunerieApiError extends Error {
     message: string,
     public readonly path?: string,
     public readonly violations?: Array<{ field: string; message: string; rejectedValue: unknown }>,
+    public readonly requestId?: string,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'LunerieApiError';
@@ -211,13 +213,26 @@ async function rawJson<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (!response.ok) {
-    const errBody = (payload as { code?: string; message?: string; path?: string; violations?: [] } | undefined) ?? {};
+    const errBody =
+      (payload as {
+        code?: string;
+        message?: string;
+        path?: string;
+        violations?: [];
+        requestId?: string;
+        retryAfterSeconds?: number;
+      } | undefined) ?? {};
+    const retryAfterHeader = response.headers.get('Retry-After');
+    const retryAfter = errBody.retryAfterSeconds
+      ?? (retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : undefined);
     throw new LunerieApiError(
       response.status,
       errBody.code ?? `HTTP_${response.status}`,
       errBody.message ?? `Request failed (${response.status})`,
       errBody.path,
       errBody.violations,
+      errBody.requestId ?? response.headers.get('X-Request-Id') ?? undefined,
+      Number.isFinite(retryAfter) ? retryAfter : undefined,
     );
   }
 
