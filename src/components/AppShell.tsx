@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useId, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ArrowUpRight, Compass, Heart, Map, Search, Settings, Sparkles, Zap } from 'lucide-react';
@@ -607,6 +607,54 @@ export function OverlayFrame({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    // After the spring entry settles, move focus into the overlay.
+    const focusTimer = window.setTimeout(() => {
+      const focusable = sectionRef.current?.querySelector<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      (focusable ?? sectionRef.current)?.focus({ preventScroll: true });
+    }, 80);
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !sectionRef.current) return;
+      const focusables = sectionRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused.current?.focus?.({ preventScroll: true });
+    };
+  }, [onClose]);
+
   return (
     <AnimatePresence>
       <motion.div
@@ -628,6 +676,11 @@ export function OverlayFrame({
         }}
       >
         <motion.section
+          ref={sectionRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
@@ -642,6 +695,7 @@ export function OverlayFrame({
             border: '1px solid var(--app-border)',
             paddingBottom: 28,
             color: 'var(--app-text)',
+            outline: 'none',
           }}
         >
           <div
@@ -659,6 +713,7 @@ export function OverlayFrame({
             }}
           >
             <div
+              aria-hidden
               style={{
                 width: 40,
                 height: 4,
@@ -670,9 +725,10 @@ export function OverlayFrame({
                 transform: 'translateX(-50%)',
               }}
             />
-            <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>{title}</h2>
+            <h2 id={titleId} style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>{title}</h2>
             <button
               onClick={onClose}
+              aria-label="Close dialog"
               style={{
                 padding: '8px 14px',
                 borderRadius: 999,
