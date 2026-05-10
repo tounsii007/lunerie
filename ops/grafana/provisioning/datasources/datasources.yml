@@ -1,6 +1,7 @@
 apiVersion: 1
 
 datasources:
+  # ----------------------------- Logs ------------------------------
   - name: Loki
     type: loki
     access: proxy
@@ -9,7 +10,16 @@ datasources:
     isDefault: false
     jsonData:
       maxLines: 1000
+      # Auto-extract traceId from the JSON logs and turn it into a
+      # clickable "View trace" link that jumps to Tempo.
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: '"traceId":"([a-f0-9]+)"'
+          name: traceId
+          url: '$${__value.raw}'
+          urlDisplayLabel: 'View trace'
 
+  # ---------------------------- Metrics ----------------------------
   - name: Prometheus
     type: prometheus
     access: proxy
@@ -18,3 +28,47 @@ datasources:
     isDefault: true
     jsonData:
       timeInterval: 15s
+      # Exemplars on Prometheus latency histograms become clickable links
+      # that jump to the matching trace in Tempo.
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
+  # ----------------------------- Traces ----------------------------
+  - name: Tempo
+    type: tempo
+    access: proxy
+    uid: tempo
+    url: http://tempo:3200
+    isDefault: false
+    jsonData:
+      # Trace → logs: clicking a span shows the matching log lines from Loki
+      # filtered to the trace id and a ±5 minute window.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        filterByTraceID: true
+        filterBySpanID: false
+        tags:
+          - key: service.name
+            value: service
+      # Trace → metrics: from a span, jump to span-derived latency metrics.
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-2m'
+        spanEndTimeShift: '2m'
+        tags:
+          - key: service.name
+            value: service
+        queries:
+          - name: 'p95 latency by service'
+            query: 'histogram_quantile(0.95, sum by(le, service) (rate(traces_spanmetrics_duration_milliseconds_bucket{service=~"$${__tags.service}"}[5m])))'
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+      search:
+        hide: false
