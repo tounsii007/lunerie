@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useMotionSafe } from '@/hooks/useMotionSafe';
 import { usePreferences } from '@/state/preferences-context';
 import { ACCENT_COLORS } from '@/theme/tokens';
 
@@ -9,99 +10,41 @@ export function OnboardingScreen() {
   const { t } = useI18n();
   const { completeOnboarding, preferences, setLocale, setAccentColor } = usePreferences();
   const haptic = useHaptic();
+  const motionSafe = useMotionSafe();
 
   return (
-    <div
-      style={{
-        minHeight: '100dvh',
-        padding: 28,
-        display: 'grid',
-        alignContent: 'space-between',
-        gap: 28,
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        style={{ display: 'grid', gap: 22 }}
-      >
+    <div className="grid min-h-[100dvh] gap-7 p-7 [align-content:space-between]">
+      <motion.div {...motionSafe.fadeUp(18, 0.5)} className="grid gap-[22px]">
         <motion.div
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          animate={motionSafe.reduce ? { y: 0 } : { y: [0, -6, 0] }}
+          transition={motionSafe.reduce ? {} : { duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          className="relative grid h-[320px] place-items-center overflow-hidden rounded-[36px] border border-white/[0.18] shadow-[0_32px_70px_var(--accent-glow)]"
           style={{
-            position: 'relative',
-            height: 320,
-            borderRadius: 36,
             background:
               'linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 50%, #38bdf8 100%)',
-            border: '1px solid rgba(255,255,255,0.18)',
-            boxShadow: '0 32px 70px var(--accent-glow)',
-            overflow: 'hidden',
-            display: 'grid',
-            placeItems: 'center',
           }}
+          aria-hidden="true"
         >
           <Sparkles size={84} color="rgba(15, 23, 42, 0.5)" />
-          <span
-            style={{
-              position: 'absolute',
-              top: 18,
-              left: 18,
-              padding: '6px 12px',
-              borderRadius: 999,
-              fontSize: 11,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-              background: 'rgba(15,23,42,0.4)',
-              color: '#fff',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
+          <span className="absolute left-[18px] top-[18px] rounded-full bg-[rgba(15,23,42,0.4)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur-md">
             Lunerie
           </span>
         </motion.div>
         <div>
-          <p
-            style={{
-              color: 'var(--accent-light)',
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-              marginBottom: 12,
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent-light)]">
             Premium travel UX
           </p>
-          <h1
-            style={{
-              fontFamily: '"Fraunces", serif',
-              fontSize: 40,
-              marginBottom: 12,
-              lineHeight: 1.02,
-              letterSpacing: '-0.02em',
-            }}
-          >
+          <h1 className="mb-3 font-display text-[40px] leading-[1.02] tracking-[-0.02em]">
             {t('onboardingTitle')}
           </h1>
-          <p style={{ lineHeight: 1.6, color: 'var(--app-text-muted)' }}>{t('onboardingBody')}</p>
+          <p className="leading-[1.6] text-[var(--app-text-muted)]">{t('onboardingBody')}</p>
         </div>
 
-        <div style={{ display: 'grid', gap: 10 }}>
-          <span
-            style={{
-              fontSize: 11,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: 'var(--app-text-muted)',
-              fontWeight: 600,
-            }}
-          >
+        <div className="grid gap-2.5">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-text-muted)]">
             Pick your color
           </span>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }} className="scrollbar-hidden">
+          <div className="scrollbar-hidden flex gap-2 overflow-x-auto" role="radiogroup" aria-label="Accent color">
             {ACCENT_COLORS.map((color) => {
               const active = preferences.accentColor === color.id;
               return (
@@ -112,16 +55,15 @@ export function OnboardingScreen() {
                     haptic('light');
                   }}
                   aria-label={color.label}
+                  aria-pressed={active}
+                  className={`h-[38px] w-[38px] min-w-[38px] rounded-xl border-2 transition ${
+                    active ? 'border-[var(--app-text)] scale-105' : 'border-transparent'
+                  }`}
                   style={{
-                    width: 38,
-                    minWidth: 38,
-                    height: 38,
-                    borderRadius: 12,
                     background: `linear-gradient(135deg, ${color.primary}, ${color.light})`,
-                    border: active ? '2px solid var(--app-text)' : '2px solid transparent',
-                    boxShadow: active ? `0 0 0 4px var(--app-bg), 0 6px 18px ${color.glow}` : `0 4px 12px ${color.glow}`,
-                    transform: active ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'all 0.18s ease',
+                    boxShadow: active
+                      ? `0 0 0 4px var(--app-bg), 0 6px 18px ${color.glow}`
+                      : `0 4px 12px ${color.glow}`,
                   }}
                 />
               );
@@ -130,8 +72,8 @@ export function OnboardingScreen() {
         </div>
       </motion.div>
 
-      <div style={{ display: 'grid', gap: 16 }}>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }} className="scrollbar-hidden">
+      <div className="grid gap-4">
+        <div className="scrollbar-hidden flex gap-2 overflow-x-auto" role="radiogroup" aria-label="Language">
           {(['de', 'en', 'fr', 'ar', 'es', 'pt'] as const).map((locale) => {
             const active = preferences.locale === locale;
             return (
@@ -141,17 +83,12 @@ export function OnboardingScreen() {
                   setLocale(locale);
                   haptic('light');
                 }}
-                style={{
-                  padding: '12px 18px',
-                  borderRadius: 999,
-                  background: active ? 'var(--accent-soft)' : 'var(--app-surface)',
-                  border: active ? '1px solid var(--accent)' : '1px solid var(--app-border)',
-                  color: active ? 'var(--accent-light)' : 'var(--app-text)',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  fontSize: 13,
-                  letterSpacing: '0.04em',
-                }}
+                aria-pressed={active}
+                className={`rounded-full border px-[18px] py-3 text-[13px] font-semibold uppercase tracking-[0.04em] ${
+                  active
+                    ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-light)]'
+                    : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)]'
+                }`}
               >
                 {locale}
               </button>
@@ -159,24 +96,15 @@ export function OnboardingScreen() {
           })}
         </div>
         <motion.button
-          whileTap={{ scale: 0.98 }}
+          whileTap={motionSafe.reduce ? undefined : { scale: 0.98 }}
           onClick={() => {
             completeOnboarding();
             haptic('success');
           }}
+          className="flex items-center justify-center gap-2.5 rounded-[22px] px-[22px] py-[18px] text-base font-extrabold tracking-[-0.01em] text-[#0f172a] shadow-[0_16px_36px_var(--accent-glow)]"
           style={{
-            padding: '18px 22px',
-            borderRadius: 22,
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-light) 60%, #38bdf8)',
-            color: '#0f172a',
-            fontWeight: 800,
-            fontSize: 16,
-            letterSpacing: '-0.01em',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            boxShadow: '0 16px 36px var(--accent-glow)',
+            background:
+              'linear-gradient(135deg, var(--accent), var(--accent-light) 60%, #38bdf8)',
           }}
         >
           {t('start')}

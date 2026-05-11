@@ -1,125 +1,83 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, Search, Sparkles, X } from 'lucide-react';
-import { EmptyState, FeatureStrip, PlaceCard, ScreenContainer, SectionHeading, SpotlightPanel } from '@/components/AppShell';
+import {
+  EmptyState,
+  FeatureStrip,
+  PlaceCard,
+  ScreenContainer,
+  SectionHeading,
+  SpotlightPanel,
+} from '@/components/AppShell';
+import { Stack } from '@/components/primitives';
 import { PlacesMap } from '@/components/PlacesMap';
 import { usePlaceSearch } from '@/hooks/usePlaceSearch';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useFavorites } from '@/state/favorites-context';
 import { useNavigation } from '@/state/navigation-context';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useMotionSafe } from '@/hooks/useMotionSafe';
 
 const SUGGESTIONS = ['Tunisia', 'Patagonia', 'Waterfalls', 'Viewpoints', 'Medina', 'Hidden gems'];
 
 export function SearchScreen() {
   const { t } = useI18n();
-  const { searchText, setSearchText, results, isEmpty, isLoading, total, fromCache } = usePlaceSearch();
+  const { searchText, setSearchText, results, isEmpty, isLoading, total, fromCache } =
+    usePlaceSearch();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { openPlace } = useNavigation();
   const haptic = useHaptic();
+  const motionSafe = useMotionSafe();
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Auto-focus the search field when the screen mounts. useRef + useEffect
+  // is the React idiom — replaces the previous getElementById + setTimeout
+  // hack which was fragile DOM coupling.
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      const input = document.getElementById('lunerie-search-input') as HTMLInputElement | null;
-      input?.focus();
-    }, 200);
-    return () => window.clearTimeout(id);
+    inputRef.current?.focus({ preventScroll: true });
   }, []);
 
   return (
     <ScreenContainer>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        style={{ display: 'grid', gap: 18 }}
-      >
+      <motion.div {...motionSafe.fadeUp()} className="grid gap-[18px]">
         <section
+          className="rounded-[28px] border border-[var(--app-border)] p-[22px] shadow-[0_24px_60px_rgba(2,8,23,0.32)] backdrop-blur-xl"
           style={{
-            padding: 22,
-            borderRadius: 28,
             background:
               'linear-gradient(135deg, var(--accent-soft), rgba(244,114,182,0.1) 55%, rgba(56,189,248,0.08))',
-            border: '1px solid var(--app-border)',
-            boxShadow: '0 24px 60px rgba(2, 8, 23, 0.32)',
-            backdropFilter: 'blur(18px)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
+          <div className="mb-[18px] flex justify-between gap-4">
             <div>
-              <span
-                style={{
-                  display: 'inline-block',
-                  marginBottom: 10,
-                  fontSize: 11,
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  color: 'var(--accent-light)',
-                  fontWeight: 700,
-                }}
-              >
+              <span className="mb-2.5 inline-block text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent-light)]">
                 Precision search
               </span>
-              <h1
-                style={{
-                  fontFamily: '"Fraunces", serif',
-                  fontSize: 36,
-                  lineHeight: 1,
-                  marginBottom: 10,
-                  letterSpacing: '-0.02em',
-                }}
-              >
+              <h1 className="mb-2.5 font-display text-[36px] leading-none tracking-[-0.02em]">
                 {t('search')}
               </h1>
-              <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.6, fontSize: 14 }}>
-                A modern command-bar feel. Strong visibility on search state, map context and result quality.
+              <p className="text-sm leading-[1.6] text-[var(--app-text-muted)]">
+                A modern command-bar feel. Strong visibility on search state, map context and
+                result quality.
               </p>
             </div>
-            <div
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 22,
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid var(--app-border)',
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-                color: 'var(--accent-light)',
-              }}
-            >
+            <div className="grid h-[60px] w-[60px] flex-shrink-0 place-items-center rounded-[22px] border border-[var(--app-border)] bg-white/[0.08] text-[var(--accent-light)]">
               <Radar size={26} />
             </div>
           </div>
 
-          <label style={{ display: 'grid', gap: 10 }}>
+          <label className="grid gap-2.5">
             <span className="sr-only">{t('search')}</span>
             <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '14px 16px',
-                borderRadius: 20,
-                border: '1px solid var(--app-border)',
-                background: 'rgba(7,17,31,0.58)',
-                backdropFilter: 'blur(18px)',
-              }}
+              className="flex items-center gap-3 rounded-[20px] border border-[var(--app-border)] px-4 py-3.5 backdrop-blur-xl"
+              style={{ background: 'rgba(7,17,31,0.58)' }}
             >
               <Search size={18} color="var(--accent-light)" />
               <input
-                id="lunerie-search-input"
+                ref={inputRef}
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder={t('searchPlaceholder')}
-                style={{
-                  width: '100%',
-                  background: 'transparent',
-                  border: 0,
-                  color: 'var(--app-text)',
-                  outline: 'none',
-                  fontSize: 15,
-                }}
+                className="w-full border-0 bg-transparent text-[15px] text-[var(--app-text)] outline-none"
               />
               {searchText.length ? (
                 <button
@@ -128,11 +86,7 @@ export function SearchScreen() {
                     haptic('light');
                   }}
                   aria-label="Clear search"
-                  style={{
-                    padding: 6,
-                    borderRadius: 8,
-                    color: 'var(--app-text-muted)',
-                  }}
+                  className="rounded-lg p-1.5 text-[var(--app-text-muted)]"
                 >
                   <X size={16} />
                 </button>
@@ -141,7 +95,7 @@ export function SearchScreen() {
           </label>
 
           {!searchText.length ? (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+            <div className="mt-3.5 flex flex-wrap gap-1.5">
               {SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion}
@@ -149,18 +103,7 @@ export function SearchScreen() {
                     setSearchText(suggestion);
                     haptic('light');
                   }}
-                  style={{
-                    padding: '7px 12px',
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid var(--app-border)',
-                    color: 'var(--app-text)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className="flex items-center gap-1.5 rounded-full border border-[var(--app-border)] bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-[var(--app-text)]"
                 >
                   <Sparkles size={11} color="var(--accent-light)" />
                   {suggestion}
@@ -172,28 +115,24 @@ export function SearchScreen() {
 
         <FeatureStrip
           items={[
-            { label: 'Source', value: fromCache ? 'Cache' : 'Live', accent: fromCache ? 'var(--app-text-muted)' : 'var(--accent-light)' },
+            {
+              label: 'Source',
+              value: fromCache ? 'Cache' : 'Live',
+              accent: fromCache ? 'var(--app-text-muted)' : 'var(--accent-light)',
+            },
             { label: 'Results', value: `${total}` },
             { label: 'Status', value: isLoading ? 'Scanning' : 'Ready' },
           ]}
         />
 
         {results.length ? (
-          <section style={{ display: 'grid', gap: 14 }}>
+          <section className="grid gap-3.5">
             <SectionHeading
               eyebrow="Map preview"
               title="Live spatial context"
               description="Results anchored to a visual map panel."
             />
-            <div
-              style={{
-                padding: 14,
-                borderRadius: 26,
-                background: 'var(--app-surface)',
-                border: '1px solid var(--app-border)',
-                boxShadow: '0 24px 60px rgba(2, 8, 23, 0.28)',
-              }}
-            >
+            <div className="rounded-[26px] border border-[var(--app-border)] bg-[var(--app-surface)] p-3.5 shadow-[0_24px_60px_rgba(2,8,23,0.28)]">
               <PlacesMap places={results.slice(0, 8)} onSelectPlace={openPlace} />
             </div>
           </section>
@@ -201,7 +140,11 @@ export function SearchScreen() {
 
         {searchText.length > 1 ? (
           <SpotlightPanel
-            title={isLoading ? 'Searching across live and cached sources' : 'Results ranked for quality and speed'}
+            title={
+              isLoading
+                ? 'Searching across live and cached sources'
+                : 'Results ranked for quality and speed'
+            }
             description="The search area behaves like a product dashboard: clear status, map-first context and strong system feedback."
             items={[
               { label: 'Matches', value: `${total}` },
@@ -217,19 +160,21 @@ export function SearchScreen() {
             body="Try Tunisia, Canada, waterfalls, viewpoints, medina, Patagonia or exact coordinates."
           />
         ) : null}
-        {isEmpty ? <EmptyState title="No matches found" body="Adjust your text, country or category filters." /> : null}
+        {isEmpty ? (
+          <EmptyState title="No matches found" body="Adjust your text, country or category filters." />
+        ) : null}
 
-        <section style={{ display: 'grid', gap: 18 }}>
+        <Stack gap="lg">
           {results.map((place) => (
             <PlaceCard
               key={place.id}
               place={place}
               favorite={isFavorite(place.id)}
-              onFavorite={() => toggleFavorite(place.id)}
+              onFavorite={() => toggleFavorite(place)}
               onOpen={() => openPlace(place)}
             />
           ))}
-        </section>
+        </Stack>
       </motion.div>
     </ScreenContainer>
   );

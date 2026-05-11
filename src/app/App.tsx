@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { AppProviders } from '@/app/providers';
 import { screenRegistry } from '@/app/screen-registry';
 import { BottomNavigation } from '@/components/AppShell';
+import { ScreenFallback } from '@/components/ScreenFallback';
 import { APP_NAME, SPLASH_DURATION_MS } from '@/constants/app';
 import { useNavigation } from '@/state/navigation-context';
 import { usePreferences } from '@/state/preferences-context';
@@ -32,60 +33,32 @@ function AppRuntime() {
 
   return (
     <div
-      style={{
-        minHeight: '100dvh',
-        background: 'var(--app-bg-image)',
-        color: 'var(--app-text)',
-        transition: 'background 0.45s ease',
-      }}
+      className="min-h-[100dvh] text-[var(--app-text)] transition-[background] duration-[450ms]"
+      style={{ background: 'var(--app-bg-image)' }}
     >
       <div
         aria-hidden
+        className="pointer-events-none fixed inset-0 opacity-[0.35]"
         style={{
-          position: 'fixed',
-          inset: 0,
           backgroundImage:
             'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
           backgroundSize: '64px 64px',
           maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.4), transparent 85%)',
-          pointerEvents: 'none',
-          opacity: 0.35,
         }}
       />
-      <ActiveScreen key={activeTab} />
+      <Suspense fallback={<ScreenFallback />}>
+        <ActiveScreen key={activeTab} />
+      </Suspense>
       <BottomNavigation />
       {selectedPlace ? <PlaceDetailsScreen place={selectedPlace} /> : null}
       {selectedCountry ? <CountryDetailsScreen country={selectedCountry} /> : null}
       <div
-        style={{
-          position: 'fixed',
-          top: 20,
-          insetInlineStart: 20,
-          padding: '10px 14px',
-          borderRadius: 999,
-          background: 'rgba(7,17,31,0.6)',
-          border: '1px solid var(--accent-soft)',
-          backdropFilter: 'blur(16px)',
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          color: 'var(--accent-light)',
-          boxShadow: '0 12px 40px rgba(2,8,23,0.22)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          zIndex: 30,
-        }}
+        aria-label={APP_NAME}
+        className="fixed start-5 top-5 z-[30] flex items-center gap-2 rounded-full border border-[var(--accent-soft)] bg-[rgba(7,17,31,0.6)] px-[14px] py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--accent-light)] shadow-[0_12px_40px_rgba(2,8,23,0.22)] backdrop-blur-xl"
       >
         <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            background: 'var(--accent)',
-            boxShadow: '0 0 12px var(--accent)',
-          }}
+          className="h-2 w-2 rounded-full bg-[var(--accent)]"
+          style={{ boxShadow: '0 0 12px var(--accent)' }}
         />
         {APP_NAME}
       </div>

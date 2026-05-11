@@ -4,9 +4,11 @@ import { toast } from 'sonner';
 import { Download, LogOut, ShieldOff, Trash2, User } from 'lucide-react';
 import { ScreenContainer } from '@/components/AppShell';
 import { ConfirmDrawer } from '@/components/ConfirmDrawer';
+import { ScreenHeader } from '@/components/primitives';
 import { useAuth } from '@/state/auth-context';
 import lunerie, { LunerieApiError } from '@/api/lunerie/lunerieClient';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useMotionSafe } from '@/hooks/useMotionSafe';
 import { AuthScreen } from '@/screens/AuthScreen';
 
 type DrawerKind = 'logout' | 'logout-all' | 'deactivate' | 'hard-delete' | null;
@@ -14,6 +16,7 @@ type DrawerKind = 'logout' | 'logout-all' | 'deactivate' | 'hard-delete' | null;
 export function AccountScreen() {
   const { user, logout, logoutAll } = useAuth();
   const haptic = useHaptic();
+  const motionSafe = useMotionSafe();
   const [busy, setBusy] = useState(false);
   const [drawer, setDrawer] = useState<DrawerKind>(null);
 
@@ -59,31 +62,48 @@ export function AccountScreen() {
 
   return (
     <ScreenContainer>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        style={{ display: 'grid', gap: 22 }}
-      >
-        <header style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent-light)' }}>
-            Your account
-          </span>
-          <h1 style={{ fontFamily: '"Fraunces", serif', fontSize: 38, lineHeight: 1, letterSpacing: '-0.02em' }}>
-            {user.displayName}
-          </h1>
-          <p style={{ color: 'var(--app-text-muted)' }}>{user.email}</p>
-        </header>
+      <motion.div {...motionSafe.fadeUp()} className="grid gap-[22px]">
+        <ScreenHeader
+          eyebrow="Your account"
+          title={user.displayName}
+          description={user.email}
+        />
 
         <Card icon={<User size={16} />} title="Session">
-          <Row title="Sign out" description="End the session on this device only." onClick={() => setDrawer('logout')} iconRight={<LogOut size={16} />} />
-          <Row title="Sign out everywhere" description="Revoke all refresh tokens for this account." onClick={() => setDrawer('logout-all')} iconRight={<ShieldOff size={16} />} />
+          <Row
+            title="Sign out"
+            description="End the session on this device only."
+            onClick={() => setDrawer('logout')}
+            iconRight={<LogOut size={16} />}
+          />
+          <Row
+            title="Sign out everywhere"
+            description="Revoke all refresh tokens for this account."
+            onClick={() => setDrawer('logout-all')}
+            iconRight={<ShieldOff size={16} />}
+          />
         </Card>
 
         <Card icon={<Download size={16} />} title="Your data">
-          <Row title="Export account data" description="Download a JSON copy of preferences, favorites, recent views/searches, sessions, audit events." onClick={exportData} iconRight={<Download size={16} />} />
-          <Row title="Deactivate account" description="Lock the account; data is preserved and can be restored." onClick={() => setDrawer('deactivate')} iconRight={<ShieldOff size={16} />} />
-          <Row danger title="Permanently delete account" description="GDPR Article 17 — irreversible. Requires password + typed confirmation." onClick={() => setDrawer('hard-delete')} iconRight={<Trash2 size={16} />} />
+          <Row
+            title="Export account data"
+            description="Download a JSON copy of preferences, favorites, recent views/searches, sessions, audit events."
+            onClick={exportData}
+            iconRight={<Download size={16} />}
+          />
+          <Row
+            title="Deactivate account"
+            description="Lock the account; data is preserved and can be restored."
+            onClick={() => setDrawer('deactivate')}
+            iconRight={<ShieldOff size={16} />}
+          />
+          <Row
+            danger
+            title="Permanently delete account"
+            description="GDPR Article 17 — irreversible. Requires password + typed confirmation."
+            onClick={() => setDrawer('hard-delete')}
+            iconRight={<Trash2 size={16} />}
+          />
         </Card>
       </motion.div>
 
@@ -94,7 +114,13 @@ export function AccountScreen() {
         description="You'll need to sign in again to sync your places."
         confirmLabel="Sign out"
         onCancel={close}
-        onConfirm={() => wrap(async () => { await logout(); haptic('warning'); toast.success('Signed out'); })}
+        onConfirm={() =>
+          wrap(async () => {
+            await logout();
+            haptic('warning');
+            toast.success('Signed out');
+          })
+        }
       />
 
       <ConfirmDrawer
@@ -105,7 +131,13 @@ export function AccountScreen() {
         confirmLabel="Revoke all sessions"
         destructive
         onCancel={close}
-        onConfirm={() => wrap(async () => { await logoutAll(); haptic('warning'); toast.success('All sessions revoked'); })}
+        onConfirm={() =>
+          wrap(async () => {
+            await logoutAll();
+            haptic('warning');
+            toast.success('All sessions revoked');
+          })
+        }
       />
 
       <ConfirmDrawer
@@ -116,7 +148,14 @@ export function AccountScreen() {
         confirmLabel="Deactivate"
         destructive
         onCancel={close}
-        onConfirm={() => wrap(async () => { await lunerie.profile.deactivate(); await logout(); haptic('warning'); toast.success('Account deactivated'); })}
+        onConfirm={() =>
+          wrap(async () => {
+            await lunerie.profile.deactivate();
+            await logout();
+            haptic('warning');
+            toast.success('Account deactivated');
+          })
+        }
       />
 
       <ConfirmDrawer
@@ -130,37 +169,35 @@ export function AccountScreen() {
         expectedHint='Type DELETE MY ACCOUNT to confirm'
         passwordLabel="Current password"
         onCancel={close}
-        onConfirm={({ password, confirmation }) => wrap(async () => {
-          await lunerie.profile.hardDelete(password, confirmation);
-          haptic('warning');
-          toast.success('Account permanently deleted');
-          await logout();
-        })}
+        onConfirm={({ password, confirmation }) =>
+          wrap(async () => {
+            await lunerie.profile.hardDelete(password, confirmation);
+            haptic('warning');
+            toast.success('Account permanently deleted');
+            await logout();
+          })
+        }
       />
     </ScreenContainer>
   );
 }
 
-function Card({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Card({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section
-      style={{
-        padding: 18,
-        borderRadius: 22,
-        background: 'var(--app-surface)',
-        border: '1px solid var(--app-border)',
-        backdropFilter: 'blur(16px)',
-        display: 'grid',
-        gap: 12,
-      }}
-    >
-      <header style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{
-          width: 26, height: 26, borderRadius: 8,
-          background: 'var(--accent-soft)', color: 'var(--accent)',
-          display: 'grid', placeItems: 'center',
-        }}>{icon}</span>
-        <h2 style={{ fontSize: 16, fontWeight: 700 }}>{title}</h2>
+    <section className="grid gap-3 rounded-[22px] border border-[var(--app-border)] bg-[var(--app-surface)] p-[18px] backdrop-blur-xl">
+      <header className="flex items-center gap-2">
+        <span className="grid h-[26px] w-[26px] place-items-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
+          {icon}
+        </span>
+        <h2 className="text-base font-bold">{title}</h2>
       </header>
       {children}
     </section>
@@ -168,7 +205,11 @@ function Card({ icon, title, children }: { icon: React.ReactNode; title: string;
 }
 
 function Row({
-  title, description, iconRight, onClick, danger,
+  title,
+  description,
+  iconRight,
+  onClick,
+  danger,
 }: {
   title: string;
   description?: string;
@@ -179,29 +220,25 @@ function Row({
   return (
     <button
       onClick={onClick}
-      style={{
-        textAlign: 'left',
-        padding: '14px 16px',
-        borderRadius: 14,
-        border: danger ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--app-border)',
-        background: danger ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
-        color: danger ? '#fca5a5' : 'var(--app-text)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        width: '100%',
-      }}
+      className={`flex w-full items-center justify-between gap-3 rounded-[14px] border px-4 py-3.5 text-left ${
+        danger
+          ? 'border-[rgba(239,68,68,0.45)] bg-[rgba(239,68,68,0.08)] text-[#fca5a5]'
+          : 'border-[var(--app-border)] bg-transparent text-[var(--app-text)]'
+      }`}
     >
-      <span style={{ display: 'grid', gap: 2 }}>
-        <strong style={{ fontSize: 14 }}>{title}</strong>
+      <span className="grid gap-0.5">
+        <strong className="text-sm">{title}</strong>
         {description ? (
-          <span style={{ fontSize: 12, color: danger ? 'rgba(252,165,165,0.78)' : 'var(--app-text-muted)' }}>
+          <span
+            className={`text-xs ${
+              danger ? 'text-[rgba(252,165,165,0.78)]' : 'text-[var(--app-text-muted)]'
+            }`}
+          >
             {description}
           </span>
         ) : null}
       </span>
-      {iconRight ? <span style={{ color: 'inherit' }}>{iconRight}</span> : null}
+      {iconRight ? <span className="text-current">{iconRight}</span> : null}
     </button>
   );
 }

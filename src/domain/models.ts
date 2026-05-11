@@ -91,6 +91,13 @@ export const UserPreferencesSchema = z.object({
 export const FavoritePlaceSchema = z.object({
   placeId: z.string(),
   savedAt: z.string(),
+  /**
+   * Snapshot of the Place at the time it was favorited. Optional for
+   * backwards-compatibility with stored entries written before this field
+   * existed; new entries always populate it so the FavoritesScreen can
+   * render without a separate Place lookup.
+   */
+  place: z.lazy(() => PlaceSchema).optional(),
 });
 
 export const ApiErrorSchema = z.object({

@@ -12,6 +12,7 @@ import {
   SectionHeading,
   SpotlightPanel,
 } from '@/components/AppShell';
+import { IconBox, PlaceCardSkeleton, Stack } from '@/components/primitives';
 import { useCountries } from '@/hooks/useCountries';
 import { useExplorePlaces } from '@/hooks/useExplorePlaces';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -20,6 +21,7 @@ import { useNavigation } from '@/state/navigation-context';
 import { useCommandPalette } from '@/state/command-palette-context';
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useMotionSafe } from '@/hooks/useMotionSafe';
 
 export function ExploreScreen() {
   const { t } = useI18n();
@@ -29,10 +31,14 @@ export function ExploreScreen() {
   const { openPlace, openCountry } = useNavigation();
   const { toggle: toggleCommandPalette } = useCommandPalette();
   const haptic = useHaptic();
+  const motionSafe = useMotionSafe();
 
   const items = useMemo(() => explore?.items ?? [], [explore]);
   const averagePopularity = useMemo(
-    () => (items.length ? Math.round(items.reduce((sum, place) => sum + place.popularity, 0) / items.length) : 0),
+    () =>
+      items.length
+        ? Math.round(items.reduce((sum, place) => sum + place.popularity, 0) / items.length)
+        : 0,
     [items],
   );
   const regionsCount = useMemo(
@@ -70,51 +76,18 @@ export function ExploreScreen() {
           haptic('light');
           toggleCommandPalette();
         }}
-        style={{
-          width: '100%',
-          marginBottom: 22,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '14px 18px',
-          borderRadius: 18,
-          border: '1px solid var(--app-border)',
-          background: 'var(--app-surface)',
-          backdropFilter: 'blur(14px)',
-          textAlign: 'left',
-          boxShadow: '0 10px 28px rgba(2, 8, 23, 0.2)',
-          color: 'var(--app-text)',
-        }}
+        className="mb-[22px] flex w-full items-center gap-3 rounded-[18px] border border-[var(--app-border)] bg-[var(--app-surface)] px-[18px] py-[14px] text-left text-[var(--app-text)] shadow-[0_10px_28px_rgba(2,8,23,0.2)] backdrop-blur-md"
       >
-        <span
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 10,
-            background: 'var(--accent-soft)',
-            color: 'var(--accent)',
-            display: 'grid',
-            placeItems: 'center',
-          }}
-        >
+        <IconBox size="md">
           <Wand2 size={16} />
-        </span>
-        <span style={{ display: 'grid', gap: 2, flex: 1 }}>
-          <strong style={{ fontSize: 14 }}>Quick actions</strong>
-          <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>
+        </IconBox>
+        <span className="grid flex-1 gap-0.5">
+          <strong className="text-sm">Quick actions</strong>
+          <span className="text-xs text-[var(--app-text-muted)]">
             Search places, change theme, or jump anywhere
           </span>
         </span>
-        <kbd
-          style={{
-            padding: '5px 9px',
-            borderRadius: 8,
-            border: '1px solid var(--app-border)',
-            fontSize: 11,
-            color: 'var(--app-text-muted)',
-            fontFamily: 'inherit',
-          }}
-        >
+        <kbd className="rounded-lg border border-[var(--app-border)] px-2 py-1 font-[inherit] text-[11px] text-[var(--app-text-muted)]">
           Ctrl K
         </kbd>
       </button>
@@ -137,7 +110,7 @@ export function ExploreScreen() {
         ]}
       />
 
-      <section style={{ marginBottom: 28 }}>
+      <section className="mb-7">
         <SectionHeading
           eyebrow="Explore feed"
           title={t('trending')}
@@ -145,38 +118,18 @@ export function ExploreScreen() {
           value={`${totalPlaces}`}
         />
         {isLoading && !items.length ? (
-          <div style={{ display: 'grid', gap: 18 }}>
-            {[0, 1].map((index) => (
-              <div
-                key={index}
-                className="skeleton"
-                style={{ height: 380, borderRadius: 32, border: '1px solid var(--app-border)' }}
-              />
-            ))}
-          </div>
+          <Stack gap="lg" aria-busy="true" aria-live="polite">
+            <PlaceCardSkeleton />
+            <PlaceCardSkeleton />
+          </Stack>
         ) : (
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={{
-              hidden: {},
-              show: { transition: { staggerChildren: 0.05 } },
-            }}
-            style={{ display: 'grid', gap: 18 }}
-          >
+          <motion.div {...motionSafe.stagger()} className="grid gap-[18px]">
             {items.map((place) => (
-              <motion.div
-                key={place.id}
-                variants={{
-                  hidden: { opacity: 0, y: 12 },
-                  show: { opacity: 1, y: 0 },
-                }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-              >
+              <motion.div key={place.id} {...motionSafe.staggerChild()}>
                 <PlaceCard
                   place={place}
                   favorite={isFavorite(place.id)}
-                  onFavorite={() => toggleFavorite(place.id)}
+                  onFavorite={() => toggleFavorite(place)}
                   onOpen={() => openPlace(place)}
                 />
               </motion.div>
@@ -185,8 +138,8 @@ export function ExploreScreen() {
         )}
       </section>
 
-      <section style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: 16, gap: 12 }}>
+      <section className="mb-7">
+        <div className="mb-4 flex items-end justify-between gap-3">
           <SectionHeading
             eyebrow="World atlas"
             title={t('countries')}
@@ -195,24 +148,17 @@ export function ExploreScreen() {
           />
         </div>
         {countries?.length ? (
-          <div style={{ position: 'relative' }}>
-            <div ref={emblaRef} style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'flex', gap: 16 }}>
+          <div className="relative">
+            <div ref={emblaRef} className="overflow-hidden">
+              <div className="flex gap-4">
                 {countries.map((country) => (
-                  <div key={country.code} style={{ flex: '0 0 auto' }}>
+                  <div key={country.code} className="flex-[0_0_auto]">
                     <CountryCard country={country} onOpen={() => openCountry(country)} />
                   </div>
                 ))}
               </div>
             </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 8,
-                marginTop: 12,
-              }}
-            >
+            <div className="mt-3 flex justify-end gap-2">
               <CarouselButton onClick={scrollPrev} aria-label="Previous">
                 <ChevronLeft size={16} />
               </CarouselButton>
@@ -238,16 +184,7 @@ function CarouselButton({
     <button
       onClick={onClick}
       {...rest}
-      style={{
-        width: 38,
-        height: 38,
-        borderRadius: 12,
-        background: 'var(--app-surface)',
-        border: '1px solid var(--app-border)',
-        color: 'var(--app-text)',
-        display: 'grid',
-        placeItems: 'center',
-      }}
+      className="grid h-[38px] w-[38px] place-items-center rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--app-text)]"
     >
       {children}
     </button>

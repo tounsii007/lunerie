@@ -8,6 +8,7 @@ import type { Country, Place } from '@/domain/models';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useNavigation } from '@/state/navigation-context';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { tokens } from '@/theme/tokens';
 
 const tabIcons: Record<AppTab, React.ComponentType<{ size?: number }>> = {
@@ -28,17 +29,7 @@ const tabLabelKeys: Record<AppTab, string> = {
 
 export function ScreenContainer({ children }: { children: React.ReactNode }) {
   return (
-    <main
-      style={{
-        height: '100dvh',
-        width: '100%',
-        maxWidth: 490,
-        margin: '0 auto',
-        padding: '24px 20px 132px',
-        overflowY: 'auto',
-      }}
-      className="scrollbar-hidden"
-    >
+    <main className="scrollbar-hidden mx-auto h-[100dvh] w-full max-w-[490px] overflow-y-auto px-5 pb-[132px] pt-6">
       {children}
     </main>
   );
@@ -487,6 +478,10 @@ export function OverlayFrame({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  // Focus-trap is keyed to mount: when this component renders, the overlay
+  // is open. On unmount focus returns to whatever opened it. Escape closes.
+  const trapRef = useFocusTrap<HTMLElement>(true, onClose);
+
   return (
     <AnimatePresence>
       <motion.div
@@ -495,60 +490,35 @@ export function OverlayFrame({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.22 }}
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(2,6,23,0.78)',
-          backdropFilter: 'blur(14px)',
-          display: 'grid',
-          placeItems: 'end center',
-          padding: 12,
-          zIndex: 60,
-        }}
+        className="fixed inset-0 z-[60] grid place-items-end place-items-center p-3 backdrop-blur-xl"
+        style={{ background: 'rgba(2,6,23,0.78)' }}
+        role="presentation"
       >
         <motion.section
+          ref={trapRef}
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
           transition={{ type: 'spring', damping: 24, stiffness: 260 }}
           onClick={(event) => event.stopPropagation()}
-          style={{
-            width: 'min(460px, 100%)',
-            maxHeight: '94dvh',
-            overflowY: 'auto',
-            borderRadius: 32,
-            background: 'var(--app-elevated)',
-            border: '1px solid var(--app-border)',
-            paddingBottom: 28,
-            color: 'var(--app-text)',
-          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          tabIndex={-1}
+          className="max-h-[94dvh] w-[min(460px,100%)] overflow-y-auto rounded-[32px] border border-[var(--app-border)] bg-[var(--app-elevated)] pb-7 text-[var(--app-text)] outline-none"
         >
-          <div
-            style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 1,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: 18,
-              background: 'var(--app-elevated)',
-              backdropFilter: 'blur(10px)',
-              borderBottom: '1px solid var(--app-border)',
-            }}
-          >
-            <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--app-border)', position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)' }} />
-            <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>{title}</h2>
+          <div className="sticky top-0 z-[1] flex items-center justify-between border-b border-[var(--app-border)] bg-[var(--app-elevated)] p-[18px] backdrop-blur-md">
+            <div
+              aria-hidden="true"
+              className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-[var(--app-border)]"
+            />
+            <h2 id="overlay-title" className="mt-1.5 text-[22px] font-bold">
+              {title}
+            </h2>
             <button
               onClick={onClose}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 999,
-                background: 'var(--app-surface)',
-                border: '1px solid var(--app-border)',
-                fontSize: 13,
-                fontWeight: 600,
-              }}
+              aria-label="Close"
+              className="rounded-full border border-[var(--app-border)] bg-[var(--app-surface)] px-[14px] py-2 text-[13px] font-semibold"
             >
               Close
             </button>
@@ -562,32 +532,12 @@ export function OverlayFrame({
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div
-      style={{
-        padding: 28,
-        borderRadius: tokens.radius.lg,
-        background: 'var(--app-surface)',
-        border: '1px solid var(--app-border)',
-        textAlign: 'center',
-        boxShadow: tokens.shadow.card,
-      }}
-    >
-      <div
-        style={{
-          width: 60,
-          height: 60,
-          borderRadius: 20,
-          margin: '0 auto 16px',
-          background: 'var(--accent-soft)',
-          display: 'grid',
-          placeItems: 'center',
-          color: 'var(--accent)',
-        }}
-      >
+    <div className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-surface)] p-7 text-center shadow-[0_10px_28px_rgba(2,8,23,0.2)]">
+      <div className="mx-auto mb-4 grid h-[60px] w-[60px] place-items-center rounded-[20px] bg-[var(--accent-soft)] text-[var(--accent)]">
         <Map size={26} />
       </div>
-      <h3 style={{ marginBottom: 8, fontSize: 17, fontWeight: 700 }}>{title}</h3>
-      <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.55, fontSize: 14 }}>{body}</p>
+      <h3 className="mb-2 text-[17px] font-bold">{title}</h3>
+      <p className="text-sm leading-[1.55] text-[var(--app-text-muted)]">{body}</p>
     </div>
   );
 }
@@ -604,44 +554,20 @@ export function SectionHeading({
   value?: string;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: 16,
-        alignItems: 'end',
-        marginBottom: 16,
-      }}
-    >
-      <div style={{ display: 'grid', gap: 6 }}>
-        <span
-          style={{
-            fontSize: 11,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: 'var(--accent-light)',
-            fontWeight: 700,
-          }}
-        >
+    <div className="mb-4 flex items-end justify-between gap-4">
+      <div className="grid gap-1.5">
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent-light)]">
           {eyebrow}
         </span>
-        <h2 style={{ fontSize: 24, lineHeight: 1.06, letterSpacing: '-0.01em' }}>{title}</h2>
+        <h2 className="text-2xl leading-[1.06] tracking-[-0.01em]">{title}</h2>
         {description ? (
-          <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.5, maxWidth: 320, fontSize: 13 }}>{description}</p>
+          <p className="max-w-[320px] text-[13px] leading-[1.5] text-[var(--app-text-muted)]">
+            {description}
+          </p>
         ) : null}
       </div>
       {value ? (
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: 999,
-            background: 'var(--accent-soft)',
-            border: '1px solid var(--app-border)',
-            fontWeight: 700,
-            color: 'var(--accent-light)',
-            fontSize: 14,
-          }}
-        >
+        <div className="rounded-full border border-[var(--app-border)] bg-[var(--accent-soft)] px-3.5 py-2.5 text-sm font-bold text-[var(--accent-light)]">
           {value}
         </div>
       ) : null}
@@ -656,45 +582,21 @@ export function FeatureStrip({
 }) {
   return (
     <section
-      style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
-        gap: 10,
-        marginBottom: 24,
-      }}
+      className="mb-6 grid gap-2.5"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((item) => (
         <div
           key={item.label}
-          style={{
-            padding: '16px 14px',
-            borderRadius: 22,
-            background: 'var(--app-surface)',
-            border: '1px solid var(--app-border)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: tokens.shadow.soft,
-          }}
+          className="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-surface)] px-3.5 py-4 shadow-[0_8px_24px_rgba(2,8,23,0.18)] backdrop-blur-xl"
         >
           <div
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: item.accent ?? 'var(--app-text)',
-              marginBottom: 4,
-              letterSpacing: '-0.01em',
-            }}
+            className="mb-1 text-[22px] font-extrabold tracking-[-0.01em]"
+            style={{ color: item.accent ?? 'var(--app-text)' }}
           >
             {item.value}
           </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: 'var(--app-text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              fontWeight: 600,
-            }}
-          >
+          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--app-text-muted)]">
             {item.label}
           </div>
         </div>

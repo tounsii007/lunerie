@@ -20,7 +20,13 @@ const removedFavoritesStore = new PersistentStore(STORAGE_KEYS.removedFavorites,
 interface FavoritesContextValue {
   favorites: FavoritePlace[];
   recentViews: Place[];
-  toggleFavorite: (placeId: string) => void;
+  /**
+   * Toggle favorite. Pass the full Place when you have it (callers in
+   * PlaceCard / PlaceDetails do) — it gets snapshotted into the favorite so
+   * the FavoritesScreen can render without an extra fetch / mock-data lookup.
+   * Passing only an id still works (legacy code paths).
+   */
+  toggleFavorite: (placeOrId: Place | string) => void;
   isFavorite: (placeId: string) => boolean;
   pushRecentView: (place: Place) => void;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
@@ -94,11 +100,16 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   /* ----- Toggle / push recent view --------------------------------------- */
 
-  const toggleFavorite = (placeId: string) => {
+  const toggleFavorite = (placeOrId: Place | string) => {
+    const placeId = typeof placeOrId === 'string' ? placeOrId : placeOrId.id;
+    const placeSnapshot = typeof placeOrId === 'string' ? undefined : placeOrId;
     const exists = favorites.some((f) => f.placeId === placeId);
     const next = exists
       ? favorites.filter((f) => f.placeId !== placeId)
-      : [...favorites, { placeId, savedAt: safeIsoDate(new Date()) }];
+      : [
+          ...favorites,
+          { placeId, savedAt: safeIsoDate(new Date()), place: placeSnapshot },
+        ];
     persistFavorites(next);
 
     if (user) {

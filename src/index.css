@@ -1,6 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* ----------------------------------------------------------------------------
+ * Theme bridge: expose the existing CSS variables to Tailwind utility classes.
+ * After this `bg-surface`, `text-app`, `border-app`, `bg-accent-soft` etc. work.
+ * Colors with rgba()/transparency stay as-is via `inline` so Tailwind's color
+ * pipeline doesn't try to alpha-modify them.
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  --color-app: var(--app-text);
+  --color-app-muted: var(--app-text-muted);
+  --color-surface: var(--app-surface);
+  --color-elevated: var(--app-elevated);
+  --color-border: var(--app-border);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-soft: var(--accent-soft);
+
+  --font-display: "Fraunces", serif;
+  --font-sans: "Plus Jakarta Sans", "Sora", system-ui, sans-serif;
+
+  --radius-card: 22px;
+  --radius-card-lg: 28px;
+  --radius-pill: 999px;
+
+  --spacing-screen-x: 20px;
+  --spacing-screen-bottom: 132px;
+  --spacing-screen-top: 24px;
+
+  --shadow-card: 0 10px 28px rgba(2, 8, 23, 0.2);
+  --shadow-card-lg: 0 24px 60px rgba(2, 8, 23, 0.32);
+}
 
 :root {
   color-scheme: dark;
