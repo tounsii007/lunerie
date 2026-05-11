@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Eye, EyeOff, Lock, LogIn, Mail, UserPlus } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, LogIn, Mail, Sparkles, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/state/auth-context';
 import { useHaptic } from '@/hooks/useHaptic';
-import { useMotionSafe } from '@/hooks/useMotionSafe';
+import { useI18n } from '@/i18n/I18nProvider';
 import { LunerieApiError } from '@/api/lunerie/lunerieClient';
 
 type Mode = 'login' | 'register';
@@ -14,7 +14,24 @@ interface AuthScreenProps {
   onBack?: () => void;
 }
 
+interface PasswordCheck {
+  label: string;
+  passed: boolean;
+}
+
+function evaluatePassword(password: string): { strength: number; checks: PasswordCheck[] } {
+  const checks: PasswordCheck[] = [
+    { label: '12+ characters', passed: password.length >= 12 },
+    { label: 'Letter', passed: /[a-zA-Z]/.test(password) },
+    { label: 'Number', passed: /\d/.test(password) },
+    { label: 'Symbol', passed: /[^a-zA-Z0-9]/.test(password) },
+  ];
+  const strength = checks.filter((c) => c.passed).length;
+  return { strength, checks };
+}
+
 export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
+  const { t } = useI18n();
   const { login, register } = useAuth();
   const haptic = useHaptic();
   const motionSafe = useMotionSafe();
@@ -25,16 +42,18 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const passwordEvaluation = useMemo(() => evaluatePassword(password), [password]);
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     try {
       if (mode === 'login') {
         await login(email.trim(), password);
-        toast.success(`Welcome back, ${email.split('@')[0]}`);
+        toast.success(t('auth.welcomeBackUser', { name: email.split('@')[0] }));
       } else {
         await register(email.trim(), password, displayName.trim() || email.split('@')[0]);
-        toast.success('Account created');
+        toast.success(t('auth.accountCreated'));
       }
       haptic('success');
       onAuthenticated?.();
@@ -47,7 +66,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
           toast.error(error.message);
         }
       } else {
-        toast.error('Something went wrong');
+        toast.error(t('errors.somethingWentWrong'));
       }
     } finally {
       setSubmitting(false);
@@ -55,61 +74,148 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
   };
 
   const passwordHint =
-    mode === 'register'
-      ? 'At least 12 characters with letters, digits and a symbol.'
-      : 'Use the password you registered with.';
+    mode === 'register' ? t('auth.passwordHintRegister') : t('auth.passwordHintLogin');
 
   return (
     <div
-      className="flex min-h-[100dvh] flex-col justify-center gap-6 overflow-y-auto p-6 [-webkit-overflow-scrolling:touch]"
-      style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+      style={{
+        minHeight: '100dvh',
+        padding: '24px 24px max(24px, env(safe-area-inset-bottom)) 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 24,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        position: 'relative',
+      }}
     >
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: '-10%',
+          left: '-15%',
+          width: 320,
+          height: 320,
+          borderRadius: 999,
+          background: 'radial-gradient(circle, var(--accent-glow), transparent 70%)',
+          filter: 'blur(28px)',
+          pointerEvents: 'none',
+          opacity: 0.7,
+        }}
+      />
       <motion.div
-        {...motionSafe.fadeUp(16, 0.35)}
-        className="mx-auto grid w-full max-w-[420px] gap-[18px] rounded-[28px] border border-[var(--app-border)] bg-[var(--app-elevated)] p-7 shadow-[0_32px_80px_rgba(2,8,23,0.45)]"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          margin: '0 auto',
+          padding: 28,
+          borderRadius: 28,
+          background: 'var(--app-elevated)',
+          border: '1px solid var(--app-border)',
+          boxShadow: '0 32px 80px rgba(2, 8, 23, 0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
+          display: 'grid',
+          gap: 18,
+          position: 'relative',
+        }}
       >
-        <header className="grid gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--accent-light)]">
-            Lunerie account
+        <header style={{ display: 'grid', gap: 8 }}>
+          <span
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: 'var(--accent-light)',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <Sparkles size={12} />
+            {t('auth.lunerieAccount')}
           </span>
-          <h1 className="font-display text-[30px] leading-[1.05] tracking-[-0.02em]">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+          <h1
+            style={{
+              fontFamily: '"Fraunces", serif',
+              fontSize: 32,
+              lineHeight: 1.05,
+              letterSpacing: '-0.022em',
+              fontWeight: 600,
+            }}
+          >
+            {mode === 'login' ? t('auth.welcomeBack') : t('auth.createYourAccount')}
           </h1>
-          <p className="text-[13px] leading-[1.55] text-[var(--app-text-muted)]">
-            {mode === 'login'
-              ? 'Sign in to sync your favorites and recent views across devices.'
-              : 'Sync your discovery feed across devices and back up everything you love.'}
+          <p style={{ color: 'var(--app-text-muted)', fontSize: 13, lineHeight: 1.6 }}>
+            {mode === 'login' ? t('auth.signInBody') : t('auth.signUpBody')}
           </p>
         </header>
 
-        {/* Tab switcher */}
+        {/* Tab switcher with sliding pill */}
         <div
-          role="tablist"
-          aria-label="Auth mode"
-          className="grid grid-cols-2 gap-1 rounded-[14px] border border-[var(--app-border)] bg-[var(--app-surface)] p-1"
+          style={{
+            position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 4,
+            padding: 4,
+            borderRadius: 14,
+            background: 'var(--app-surface)',
+            border: '1px solid var(--app-border)',
+          }}
         >
-          {(['login', 'register'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="tab"
-              onClick={() => setMode(m)}
-              aria-selected={mode === m}
-              className={`flex items-center justify-center gap-1.5 rounded-[11px] px-3 py-2.5 text-[13px] transition ${
-                mode === m
-                  ? 'bg-[var(--accent)] font-bold text-[#0f172a]'
-                  : 'bg-transparent font-medium text-[var(--app-text)]'
-              }`}
-            >
-              {m === 'login' ? <LogIn size={14} /> : <UserPlus size={14} />}
-              {m === 'login' ? 'Sign in' : 'Sign up'}
-            </button>
-          ))}
+          {(['login', 'register'] as Mode[]).map((m) => {
+            const active = mode === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                aria-pressed={active}
+                style={{
+                  position: 'relative',
+                  padding: '11px 12px',
+                  borderRadius: 11,
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 500,
+                  background: 'transparent',
+                  color: active ? '#0f172a' : 'var(--app-text)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'color 0.22s var(--ease-out)',
+                  zIndex: 1,
+                }}
+              >
+                {active ? (
+                  <motion.span
+                    layoutId="auth-tab-active"
+                    transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 11,
+                      background: 'var(--accent)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32), 0 4px 14px var(--accent-glow)',
+                      zIndex: -1,
+                    }}
+                  />
+                ) : null}
+                {m === 'login' ? <LogIn size={14} /> : <UserPlus size={14} />}
+                {m === 'login' ? t('auth.signIn') : t('auth.signUp')}
+              </button>
+            );
+          })}
         </div>
 
         <form onSubmit={submit} className="grid gap-3.5">
           {mode === 'register' ? (
-            <Field label="Display name" icon={<UserPlus size={16} />}>
+            <Field label={t('auth.displayName')} icon={<UserPlus size={16} />}>
               <input
                 type="text"
                 value={displayName}
@@ -121,7 +227,7 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
             </Field>
           ) : null}
 
-          <Field label="Email" icon={<Mail size={16} />}>
+          <Field label={t('auth.email')} icon={<Mail size={16} />}>
             <input
               type="email"
               value={email}
@@ -133,8 +239,8 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
             />
           </Field>
 
-          <Field label="Password" icon={<Lock size={16} />}>
-            <div className="flex items-center">
+          <Field label={t('auth.password')} icon={<Lock size={16} />}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -148,35 +254,82 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="rounded-[9px] p-2 text-[var(--app-text-muted)]"
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                style={{
+                  padding: 8,
+                  borderRadius: 9,
+                  color: 'var(--app-text-muted)',
+                }}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <span className="text-[11px] text-[var(--app-text-muted)]">{passwordHint}</span>
+            {mode === 'register' && password.length > 0 ? (
+              <PasswordStrength evaluation={passwordEvaluation} t={t} />
+            ) : (
+              <span style={{ fontSize: 11, color: 'var(--app-text-muted)' }}>{passwordHint}</span>
+            )}
           </Field>
 
           <motion.button
             type="submit"
-            whileTap={motionSafe.reduce ? undefined : { scale: 0.98 }}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
             disabled={submitting}
             className="mt-1 flex items-center justify-center gap-2 rounded-2xl px-[18px] py-3.5 text-[15px] font-extrabold text-[#0f172a] shadow-[0_12px_32px_var(--accent-glow)] disabled:cursor-wait disabled:opacity-60"
             style={{
+              marginTop: 4,
+              padding: '15px 18px',
+              borderRadius: 16,
               background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+              color: '#0f172a',
+              fontWeight: 800,
+              fontSize: 15,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: '0 14px 36px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.32)',
+              opacity: submitting ? 0.7 : 1,
+              cursor: submitting ? 'wait' : 'pointer',
+              transition: 'opacity 0.22s var(--ease-out)',
             }}
           >
-            {submitting ? 'Working…' : mode === 'login' ? 'Sign in' : 'Create account'}
-            {!submitting ? <ArrowRight size={16} /> : null}
+            {submitting ? (
+              <>
+                <Loader2 size={16} style={{ animation: 'spin 0.9s linear infinite' }} aria-hidden />
+                {t('working')}
+              </>
+            ) : (
+              <>
+                {mode === 'login' ? t('auth.signInCta') : t('auth.createAccountCta')}
+                <ArrowRight size={16} aria-hidden />
+              </>
+            )}
           </motion.button>
         </form>
 
         {onBack ? (
           <button
             onClick={onBack}
-            className="p-2 text-center text-[13px] text-[var(--app-text-muted)]"
+            style={{
+              fontSize: 13,
+              color: 'var(--app-text-muted)',
+              textAlign: 'center',
+              padding: 10,
+              borderRadius: 12,
+              transition: 'background 0.18s var(--ease-out), color 0.18s var(--ease-out)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--app-text)';
+              e.currentTarget.style.background = 'var(--app-surface)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--app-text-muted)';
+              e.currentTarget.style.background = 'transparent';
+            }}
           >
-            Continue without an account
+            {t('auth.continueWithoutAccount')}
           </button>
         ) : null}
       </motion.div>
@@ -184,8 +337,16 @@ export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
   );
 }
 
-const inputClasses =
-  'w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] px-3.5 py-3 text-sm text-[var(--app-text)] outline-none';
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '13px 14px',
+  borderRadius: 12,
+  background: 'var(--app-surface)',
+  border: '1px solid var(--app-border)',
+  color: 'var(--app-text)',
+  outline: 'none',
+  fontSize: 14,
+};
 
 function Field({
   label,
@@ -204,5 +365,71 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+function PasswordStrength({
+  evaluation,
+  t,
+}: {
+  evaluation: { strength: number; checks: PasswordCheck[] };
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const colors = ['#ef4444', '#f59e0b', '#facc15', '#84cc16', '#10b981'];
+  const labelKeys = [
+    'auth.passwordVeryWeak',
+    'auth.passwordWeak',
+    'auth.passwordFair',
+    'auth.passwordGood',
+    'auth.passwordStrong',
+  ];
+  const color = colors[evaluation.strength] ?? colors[0];
+  const label = t(labelKeys[evaluation.strength] ?? labelKeys[0]);
+
+  return (
+    <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 4,
+        }}
+        aria-hidden
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <motion.span
+            key={i}
+            initial={{ scaleX: 0.4, opacity: 0.4 }}
+            animate={{
+              scaleX: 1,
+              opacity: i < evaluation.strength ? 1 : 0.25,
+              backgroundColor: i < evaluation.strength ? color : 'rgba(148, 163, 184, 0.32)',
+            }}
+            transition={{ duration: 0.22 }}
+            style={{
+              height: 4,
+              borderRadius: 999,
+              transformOrigin: 'left',
+            }}
+          />
+        ))}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: 11,
+        }}
+      >
+        <span style={{ color, fontWeight: 700 }}>{label}</span>
+        <span style={{ color: 'var(--app-text-muted)' }}>
+          {t('auth.requirementsMet', {
+            passed: evaluation.checks.filter((c) => c.passed).length,
+            total: 4,
+          })}
+        </span>
+      </div>
+    </div>
   );
 }

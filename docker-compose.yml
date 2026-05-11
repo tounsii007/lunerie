@@ -79,6 +79,13 @@ services:
       LOG_LEVEL_APP:  ${LOG_LEVEL_APP:-INFO}
       VIRTUAL_THREADS_ENABLED: ${VIRTUAL_THREADS_ENABLED:-true}
 
+      # Distributed tracing → OTel collector → Tempo
+      LUNERIE_TRACING_ENABLED:   ${LUNERIE_TRACING_ENABLED:-true}
+      LUNERIE_TRACING_SAMPLE_RATE: ${LUNERIE_TRACING_SAMPLE_RATE:-1.0}
+      LUNERIE_OTLP_ENDPOINT:     ${LUNERIE_OTLP_ENDPOINT:-http://otel-collector:4318/v1/traces}
+      LUNERIE_ENV:               ${LUNERIE_ENV:-docker}
+      LUNERIE_INSTANCE_ID:       ${LUNERIE_INSTANCE_ID:-backend}
+
       # Mail
       SMTP_HOST:     ${SMTP_HOST:-mailhog}
       SMTP_PORT:     ${SMTP_PORT:-1025}
@@ -194,6 +201,10 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=15d
       - --web.enable-lifecycle
+      # Accept remote_write from Tempo's metrics_generator (span-derived metrics)
+      - --web.enable-remote-write-receiver
+      # Expose exemplars to Grafana — required for the trace-jump links.
+      - --enable-feature=exemplar-storage
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
@@ -249,6 +260,51 @@ services:
       - postgres-backup-data:/backups
     networks: [lunerie-net]
 
+  # Tempo: object-store-backed distributed tracing backend.
+  tempo:
+    image: grafana/tempo:2.6.0
+    container_name: lunerie-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    user: "0"
+    volumes:
+      - ./ops/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"   # Grafana querying
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [lunerie-net]
+
+  # OpenTelemetry collector — single ingress for OTLP from backend / future producers.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.117.0
+    container_name: lunerie-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel/config.yaml"]
+    environment:
+      LUNERIE_ENV: ${LUNERIE_ENV:-docker}
+    volumes:
+      - ./ops/otel-collector/otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    depends_on:
+      tempo:
+        condition: service_healthy
+    ports:
+      - "${OTEL_HTTP_PORT:-4318}:4318"  # OTLP HTTP
+      - "${OTEL_GRPC_PORT:-4317}:4317"  # OTLP gRPC
+      - "13133:13133"                   # health
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:13133/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+    networks: [lunerie-net]
+
   grafana:
     image: grafana/grafana:11.4.0
     container_name: lunerie-grafana
@@ -257,6 +313,8 @@ services:
       loki:
         condition: service_healthy
       prometheus:
+        condition: service_healthy
+      tempo:
         condition: service_healthy
     environment:
       GF_SECURITY_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}
@@ -285,6 +343,7 @@ volumes:
   prometheus-data:
   alertmanager-data:
   grafana-data:
+  tempo-data:
 
 networks:
   lunerie-net:

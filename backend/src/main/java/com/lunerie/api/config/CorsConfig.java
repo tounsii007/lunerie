@@ -25,7 +25,15 @@ public class CorsConfig {
         cfg.setAllowedOriginPatterns(allowedOrigins);
         cfg.setAllowedMethods(allowedMethods);
         cfg.setAllowedHeaders(List.of("*"));
-        cfg.setExposedHeaders(List.of("Location", "Content-Disposition", "X-Total-Count"));
+        cfg.setExposedHeaders(List.of(
+                "Location",
+                "Content-Disposition",
+                "X-Total-Count",
+                // Frontend reads these for telemetry / 429 backoff / log correlation.
+                "X-Request-Id",
+                "Server-Timing",
+                "Retry-After"
+        ));
         cfg.setAllowCredentials(allowCredentials);
         cfg.setMaxAge(Duration.ofSeconds(maxAgeSeconds));
         source.registerCorsConfiguration("/**", cfg);

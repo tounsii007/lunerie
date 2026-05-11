@@ -1,0 +1,54 @@
+# OpenTelemetry collector — receives OTLP from the backend over HTTP/gRPC,
+# applies pipeline processing, and forwards to Tempo.
+# Lightweight contrib build is enough; nothing fancy is enabled here.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # Bound memory under load so the collector doesn't OOM and tip over.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  # Batch spans before forwarding to reduce request count to Tempo.
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+  # Surface a few useful resource attributes if the SDK didn't set them.
+  resource:
+    attributes:
+      - key: deployment.environment
+        action: upsert
+        value: ${env:LUNERIE_ENV}
+
+exporters:
+  otlphttp/tempo:
+    endpoint: http://tempo:4318
+    tls:
+      insecure: true
+  # Optional: log spans for debugging the collector pipeline itself.
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/tempo]
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888  # scraped by Prometheus job 'otel-collector'

@@ -11,6 +11,7 @@ import com.lunerie.api.security.JwtService;
 import com.lunerie.api.web.dto.AuthDtos;
 import com.lunerie.api.web.dto.AuthDtos.AuthTokens;
 import com.lunerie.api.web.dto.AuthDtos.UserSummary;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +41,8 @@ public class AuthService {
     private final AuditService auditService;
     private final VerificationService verificationService;
 
+    @Observed(name = "lunerie.auth.register", contextualName = "auth.register",
+            lowCardinalityKeyValues = {"flow", "register"})
     @Transactional
     public AuthTokens register(AuthDtos.RegisterRequest request, String userAgent, String ip) {
         String email = request.email().trim().toLowerCase();
@@ -69,6 +72,8 @@ public class AuthService {
         return issueTokens(user, userAgent, ip);
     }
 
+    @Observed(name = "lunerie.auth.login", contextualName = "auth.login",
+            lowCardinalityKeyValues = {"flow", "login"})
     @Transactional
     public AuthTokens login(AuthDtos.LoginRequest request, String userAgent, String ip) {
         try {

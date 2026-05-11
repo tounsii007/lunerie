@@ -44,9 +44,17 @@ public class AuditService {
                     .createdAt(Instant.now())
                     .build();
             repository.save(event);
+            log.info("audit.recorded event_type={} actor_id={} target_type={} target_id={}",
+                    eventType,
+                    actor != null ? actor.getId() : "anonymous",
+                    targetType != null ? targetType : "-",
+                    targetId != null ? targetId : "-");
         } catch (Exception ex) {
             // Audit must never break business flows
-            log.warn("audit.failed event_type={} reason={}", eventType, ex.getMessage());
+            log.warn("audit.failed event_type={} actor_id={} reason={}",
+                    eventType,
+                    actor != null ? actor.getId() : "anonymous",
+                    ex.getMessage());
         }
     }
 

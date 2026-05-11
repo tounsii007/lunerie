@@ -4,6 +4,7 @@ import com.lunerie.api.common.NotFoundException;
 import com.lunerie.api.domain.place.Place;
 import com.lunerie.api.domain.place.PlaceCategory;
 import com.lunerie.api.domain.place.PlaceRepository;
+import io.micrometer.observation.annotation.Observed;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -47,6 +48,8 @@ public class PlaceService {
         return primeSummary(placeRepository.findAll(pageable));
     }
 
+    @Observed(name = "lunerie.places.search", contextualName = "places.search",
+            lowCardinalityKeyValues = {"flow", "search"})
     public Page<Place> search(String query, SearchCriteria criteria, Pageable pageable) {
         if (query == null || query.isBlank()) {
             return list(criteria, pageable);
@@ -68,7 +71,10 @@ public class PlaceService {
             // the outer query (which forces DISTINCT and inflates row count).
             var tagSub = q.subquery(Long.class);
             var tagRoot = tagSub.correlate(root);
-            var tag = tagRoot.join("tags", JoinType.INNER);
+            // Element-collection of String — explicit `.as(String.class)` so JDK 26's
+            // stricter generic inference can resolve the cb.lower(...) overload.
+            jakarta.persistence.criteria.Expression<String> tag =
+                    tagRoot.join("tags", JoinType.INNER).as(String.class);
             tagSub.select(cb.literal(1L)).where(cb.like(cb.lower(tag), pattern));
             return cb.or(
                     cb.like(cb.lower(root.get("name")), pattern),

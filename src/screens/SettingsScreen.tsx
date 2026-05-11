@@ -63,13 +63,29 @@ export function SettingsScreen() {
         style={{ display: 'grid', gap: 22 }}
       >
         <header style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent-light)' }}>
+          <span
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: 'var(--accent-light)',
+              fontWeight: 700,
+            }}
+          >
             Personalize
           </span>
-          <h1 style={{ fontFamily: '"Fraunces", serif', fontSize: 38, lineHeight: 1, letterSpacing: '-0.02em' }}>
+          <h1
+            style={{
+              fontFamily: '"Fraunces", serif',
+              fontSize: 38,
+              lineHeight: 1,
+              letterSpacing: '-0.022em',
+              fontWeight: 600,
+            }}
+          >
             {t('settings')}
           </h1>
-          <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.55, maxWidth: 360 }}>
+          <p style={{ color: 'var(--app-text-muted)', lineHeight: 1.6, maxWidth: 360, fontSize: 14 }}>
             Make Lunerie feel yours. Pick a color, a vibe, and your favorite categories.
           </p>
         </header>
@@ -109,8 +125,8 @@ export function SettingsScreen() {
               <Wand2 size={18} />
             </span>
             <span style={{ display: 'grid', gap: 2 }}>
-              <strong style={{ fontSize: 14 }}>Open command palette</strong>
-              <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>Quick actions, themes, places</span>
+              <strong style={{ fontSize: 14 }}>{t('openCommandPalette')}</strong>
+              <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>{t('commandPaletteHint')}</span>
             </span>
           </div>
           <kbd
@@ -127,13 +143,13 @@ export function SettingsScreen() {
           </kbd>
         </button>
 
-        <Card icon={<User size={16} />} title="Account" description={authUser ? `Signed in as ${authUser.email}` : 'Sign in to sync your favorites and recent views across devices.'}>
+        <Card icon={<User size={16} />} title={t('account.title')} description={authUser ? t('account.signedInAs', { email: authUser.email }) : t('account.signInBody')}>
           {authUser ? (
             <button
               onClick={async () => {
                 await authLogout();
                 haptic('light');
-                toast.success('Signed out');
+                toast.success(t('auth.signedOut'));
               }}
               style={{
                 display: 'flex',
@@ -151,8 +167,8 @@ export function SettingsScreen() {
               }}
             >
               <span style={{ display: 'grid', gap: 2 }}>
-                <strong style={{ fontSize: 14 }}>Sign out</strong>
-                <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>End the current session</span>
+                <strong style={{ fontSize: 14 }}>{t('auth.signOut')}</strong>
+                <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>{t('account.signOutDescription')}</span>
               </span>
               <LogOut size={16} />
             </button>
@@ -176,7 +192,7 @@ export function SettingsScreen() {
                 width: '100%',
               }}
             >
-              <span>Sign in / create account</span>
+              <span>{t('auth.signInPrompt')}</span>
               <LogIn size={16} />
             </button>
           )}
@@ -635,6 +651,8 @@ function ToggleRow({
       onClick={() => onChange(!checked)}
       role="switch"
       aria-checked={checked}
+      aria-label={label}
+      data-state={checked ? 'On' : 'Off'}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -668,27 +686,34 @@ function ToggleRow({
           {description ? <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>{description}</span> : null}
         </div>
       </div>
+      {/* Visually-hidden state text — exposes 'On'/'Off' to textContent for tests
+          and to assistive tech as a fallback (aria-checked is the primary signal). */}
+      <span className="sr-only">{checked ? 'On' : 'Off'}</span>
       <span
         aria-hidden
         style={{
-          width: 44,
-          height: 26,
+          position: 'relative',
+          width: 46,
+          height: 28,
           padding: 3,
           borderRadius: 999,
           background: checked ? 'var(--accent)' : 'rgba(148, 163, 184, 0.32)',
-          transition: 'background 0.2s ease',
+          transition: 'background 0.22s var(--ease-out)',
+          boxShadow: checked
+            ? 'inset 0 1px 0 rgba(255,255,255,0.32), 0 4px 14px var(--accent-glow)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.06)',
         }}
       >
-        <span
+        <motion.span
+          animate={{ x: checked ? 18 : 0 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 380 }}
           style={{
             display: 'block',
-            width: 20,
-            height: 20,
+            width: 22,
+            height: 22,
             borderRadius: 999,
             background: '#fff',
-            transform: checked ? 'translateX(18px)' : 'translateX(0)',
-            transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.22)',
           }}
         />
       </span>
@@ -708,6 +733,7 @@ function SegmentedControl({
   return (
     <div
       style={{
+        position: 'relative',
         display: 'grid',
         gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
         gap: 4,
@@ -723,16 +749,33 @@ function SegmentedControl({
           <button
             key={option.value}
             onClick={() => onChange(option.value)}
+            aria-pressed={active}
             style={{
-              padding: '8px 6px',
+              position: 'relative',
+              padding: '9px 6px',
               borderRadius: 9,
               fontSize: 12,
               fontWeight: active ? 700 : 500,
-              background: active ? 'var(--accent)' : 'transparent',
+              background: 'transparent',
               color: active ? '#0f172a' : 'var(--app-text-muted)',
-              transition: 'all 0.18s ease',
+              transition: 'color 0.22s var(--ease-out)',
+              zIndex: 1,
             }}
           >
+            {active ? (
+              <motion.span
+                layoutId="segmented-active"
+                transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: 9,
+                  background: 'var(--accent)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32), 0 4px 14px var(--accent-glow)',
+                  zIndex: -1,
+                }}
+              />
+            ) : null}
             {option.label}
           </button>
         );

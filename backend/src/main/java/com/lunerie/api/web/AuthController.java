@@ -4,6 +4,7 @@ import com.lunerie.api.application.auth.AuthService;
 import com.lunerie.api.application.auth.RateLimiter;
 import com.lunerie.api.common.BadRequestException;
 import com.lunerie.api.common.RequestContext;
+import com.lunerie.api.common.TooManyRequestsException;
 import com.lunerie.api.security.CurrentUser;
 import com.lunerie.api.security.JwtService;
 import com.lunerie.api.security.RefreshCookie;
@@ -122,8 +123,9 @@ public class AuthController {
     }
 
     private void guardRate(String key) {
-        if (!rateLimiter.tryAcquire(key)) {
-            throw new BadRequestException("Too many requests, please retry shortly");
+        RateLimiter.Outcome outcome = rateLimiter.probe(key);
+        if (!outcome.allowed()) {
+            throw new TooManyRequestsException("Too many requests, please retry shortly", outcome.retryAfterSeconds());
         }
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, Search, Sparkles, X } from 'lucide-react';
 import {
@@ -22,13 +22,11 @@ const SUGGESTIONS = ['Tunisia', 'Patagonia', 'Waterfalls', 'Viewpoints', 'Medina
 
 export function SearchScreen() {
   const { t } = useI18n();
-  const { searchText, setSearchText, results, isEmpty, isLoading, total, fromCache } =
-    usePlaceSearch();
+  const { searchText, setSearchText, results, isEmpty, isLoading, isPending, total, fromCache } = usePlaceSearch();
   const { toggleFavorite, isFavorite } = useFavorites();
   const { openPlace } = useNavigation();
   const haptic = useHaptic();
-  const motionSafe = useMotionSafe();
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [focused, setFocused] = useState(false);
 
   // Auto-focus the search field when the screen mounts. useRef + useEffect
   // is the React idiom — replaces the previous getElementById + setTimeout
@@ -68,46 +66,104 @@ export function SearchScreen() {
           <label className="grid gap-2.5">
             <span className="sr-only">{t('search')}</span>
             <div
-              className="flex items-center gap-3 rounded-[20px] border border-[var(--app-border)] px-4 py-3.5 backdrop-blur-xl"
-              style={{ background: 'rgba(7,17,31,0.58)' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '14px 16px',
+                borderRadius: 20,
+                border: focused
+                  ? '1px solid var(--accent)'
+                  : '1px solid var(--app-border)',
+                background: 'rgba(7,17,31,0.58)',
+                backdropFilter: 'blur(18px)',
+                WebkitBackdropFilter: 'blur(18px)',
+                boxShadow: focused ? '0 0 0 4px var(--accent-soft)' : 'none',
+                transition: 'border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out)',
+              }}
             >
-              <Search size={18} color="var(--accent-light)" />
+              <motion.span
+                animate={focused ? { rotate: [0, -8, 8, 0] } : { rotate: 0 }}
+                transition={{ duration: 0.5 }}
+                style={{ display: 'inline-flex', color: 'var(--accent-light)' }}
+              >
+                <Search size={18} />
+              </motion.span>
               <input
-                ref={inputRef}
+                id="lunerie-search-input"
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label={t('search')}
                 value={searchText}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder={t('searchPlaceholder')}
                 className="w-full border-0 bg-transparent text-[15px] text-[var(--app-text)] outline-none"
               />
               {searchText.length ? (
-                <button
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  whileTap={{ scale: 0.85 }}
                   onClick={() => {
                     setSearchText('');
                     haptic('light');
                   }}
                   aria-label="Clear search"
-                  className="rounded-lg p-1.5 text-[var(--app-text-muted)]"
+                  style={{
+                    padding: 6,
+                    borderRadius: 10,
+                    color: 'var(--app-text-muted)',
+                    background: 'rgba(255,255,255,0.06)',
+                  }}
                 >
                   <X size={16} />
-                </button>
+                </motion.button>
               ) : null}
             </div>
           </label>
 
           {!searchText.length ? (
-            <div className="mt-3.5 flex flex-wrap gap-1.5">
-              {SUGGESTIONS.map((suggestion) => (
-                <button
+            <div
+              role="list"
+              aria-label="Suggested searches"
+              style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}
+            >
+              {SUGGESTIONS.map((suggestion, index) => (
+                <motion.button
+                  role="listitem"
                   key={suggestion}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04 * index, duration: 0.3 }}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => {
                     setSearchText(suggestion);
                     haptic('light');
                   }}
-                  className="flex items-center gap-1.5 rounded-full border border-[var(--app-border)] bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-[var(--app-text)]"
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--app-border)',
+                    color: 'var(--app-text)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                  }}
                 >
                   <Sparkles size={11} color="var(--accent-light)" />
                   {suggestion}
-                </button>
+                </motion.button>
               ))}
             </div>
           ) : null}
@@ -121,9 +177,54 @@ export function SearchScreen() {
               accent: fromCache ? 'var(--app-text-muted)' : 'var(--accent-light)',
             },
             { label: 'Results', value: `${total}` },
-            { label: 'Status', value: isLoading ? 'Scanning' : 'Ready' },
+            {
+              label: 'Status',
+              value: isPending ? 'Typing' : isLoading ? 'Scanning' : 'Ready',
+              accent: isPending || isLoading ? 'var(--accent-light)' : undefined,
+            },
           ]}
         />
+
+        {searchText.length > 1 && !isLoading ? (
+          <motion.div
+            key={`summary-${total}-${searchText}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32 }}
+            role="status"
+            aria-live="polite"
+            style={{
+              display: 'inline-flex',
+              alignSelf: 'start',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 14px',
+              borderRadius: 999,
+              background: 'var(--app-surface)',
+              border: '1px solid var(--app-border)',
+              fontSize: 13,
+              color: 'var(--app-text-muted)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
+          >
+            <span style={{ color: 'var(--accent-light)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+              {total}
+            </span>
+            {total === 1 ? 'result' : 'results'} for
+            <span
+              style={{
+                fontWeight: 700,
+                color: 'var(--app-text)',
+                background: 'var(--accent-soft)',
+                padding: '2px 8px',
+                borderRadius: 8,
+              }}
+            >
+              {searchText.trim().slice(0, 32)}
+            </span>
+          </motion.div>
+        ) : null}
 
         {results.length ? (
           <section className="grid gap-3.5">
@@ -164,15 +265,26 @@ export function SearchScreen() {
           <EmptyState title="No matches found" body="Adjust your text, country or category filters." />
         ) : null}
 
-        <Stack gap="lg">
-          {results.map((place) => (
-            <PlaceCard
+        <section
+          aria-label="Search results"
+          aria-busy={isLoading}
+          aria-live="polite"
+          style={{ display: 'grid', gap: 18 }}
+        >
+          {results.map((place, index) => (
+            <motion.div
               key={place.id}
-              place={place}
-              favorite={isFavorite(place.id)}
-              onFavorite={() => toggleFavorite(place)}
-              onOpen={() => openPlace(place)}
-            />
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.04 * Math.min(index, 5), duration: 0.32 }}
+            >
+              <PlaceCard
+                place={place}
+                favorite={isFavorite(place.id)}
+                onFavorite={() => toggleFavorite(place.id)}
+                onOpen={() => openPlace(place)}
+              />
+            </motion.div>
           ))}
         </Stack>
       </motion.div>

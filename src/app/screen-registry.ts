@@ -1,16 +1,15 @@
 import { lazy, type ComponentType } from 'react';
 import type { AppTab } from '@/constants/app';
+import { ExploreScreen } from '@/screens/ExploreScreen';
 
 /**
  * Single source of truth for "which component renders for which tab".
- * Adding a new tab is one entry here + one entry in {@code APP_TABS}.
  *
- * Each screen is loaded lazily so the initial bundle only ships the active
- * tab. Suspense fallbacks are handled one level up (see AppRouter).
+ * The first-load tab (Explore) is statically imported so the initial
+ * paint doesn't wait on a chunk fetch. Every other tab is lazily
+ * code-split — react-leaflet (Nearby), embla (Search), the heavy
+ * SettingsScreen, etc. only land in the bundle when actually navigated to.
  */
-const ExploreScreen = lazy(() =>
-  import('@/screens/ExploreScreen').then((m) => ({ default: m.ExploreScreen })),
-);
 const SearchScreen = lazy(() =>
   import('@/screens/SearchScreen').then((m) => ({ default: m.SearchScreen })),
 );

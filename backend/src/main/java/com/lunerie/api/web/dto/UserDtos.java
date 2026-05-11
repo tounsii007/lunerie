@@ -1,5 +1,6 @@
 package com.lunerie.api.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lunerie.api.domain.place.PlaceCategory;
 import com.lunerie.api.domain.user.*;
 import jakarta.validation.constraints.Max;
@@ -76,11 +77,14 @@ public final class UserDtos {
     ) {}
 
     public record ChangePasswordRequest(
+            @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
             @jakarta.validation.constraints.NotBlank @Size(min = 1) String currentPassword,
+            @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
             @jakarta.validation.constraints.NotBlank @com.lunerie.api.common.validation.StrongPassword String newPassword
     ) {}
 
     public record DeleteAccountRequest(
+            @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
             @jakarta.validation.constraints.NotBlank String currentPassword,
             /** Must equal the literal string {@code DELETE MY ACCOUNT}. */
             @jakarta.validation.constraints.Pattern(regexp = "^DELETE MY ACCOUNT$",

@@ -5,6 +5,7 @@ import com.lunerie.api.common.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -23,12 +24,14 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException ex) throws IOException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setHeader("WWW-Authenticate", "Bearer realm=\"lunerie\"");
         ApiError body = ApiError.of(
-                HttpStatus.UNAUTHORIZED.value(),
-                "UNAUTHENTICATED",
-                "Authentication required",
-                request.getRequestURI()
-        );
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "UNAUTHENTICATED",
+                        "Authentication required",
+                        request.getRequestURI())
+                .withMethod(request.getMethod())
+                .withRequestId(MDC.get("requestId"));
         objectMapper.writeValue(response.getOutputStream(), body);
     }
 }

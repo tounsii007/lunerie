@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { Heart, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Heart, MapPin, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OverlayFrame } from '@/components/AppShell';
 import { Button, Card, Pill, Stack } from '@/components/primitives';
@@ -17,6 +18,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
   const { isFavorite, toggleFavorite, pushRecentView } = useFavorites();
   const haptic = useHaptic();
   const saved = isFavorite(place.id);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     pushRecentView(place);
@@ -27,7 +29,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
     // FavoritesScreen for why this matters.
     toggleFavorite(place);
     haptic('success');
-    toast.success(saved ? 'Removed from favorites' : 'Added to favorites', { duration: 1600 });
+    toast.success(saved ? t('removedFromFavorites') : t('addedToFavorites'), { duration: 1600 });
   };
 
   const handleShare = async () => {
@@ -46,76 +48,246 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
 
   return (
     <OverlayFrame title={place.name} onClose={closeOverlay}>
-      <div className="relative">
-        <img
+      <div style={{ position: 'relative' }}>
+        <div
+          aria-hidden
+          className={imageLoaded ? '' : 'skeleton'}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: imageLoaded ? 'transparent' : 'var(--app-surface)',
+            transition: 'background 0.4s var(--ease-out)',
+          }}
+        />
+        <motion.img
+          key={place.heroImage.url}
           src={place.heroImage.url}
           alt={place.name}
           loading="eager"
           decoding="async"
-          className="h-[280px] w-full object-cover"
+          onLoad={() => setImageLoaded(true)}
+          initial={{ opacity: 0, scale: 1.06 }}
+          animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 1.06 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: '100%', height: 280, objectFit: 'cover', display: 'block' }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_50%,rgba(2,6,23,0.7))]" />
-        <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between gap-3">
-          <Pill tone="inverse">{place.popularity}% hot</Pill>
-          <Pill tone="accent" className="uppercase tracking-[0.06em]">
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'linear-gradient(180deg, transparent 38%, rgba(2,6,23,0.72) 96%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 16,
+            left: 20,
+            right: 20,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'end',
+            gap: 12,
+          }}
+        >
+          <span
+            style={{
+              padding: '8px 12px',
+              borderRadius: 999,
+              background: 'rgba(15,23,42,0.6)',
+              border: '1px solid rgba(255,255,255,0.16)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#fff',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {place.popularity}% hot
+          </span>
+          <span
+            style={{
+              padding: '6px 10px',
+              borderRadius: 999,
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--accent-soft)',
+              fontSize: 11,
+              fontWeight: 700,
+              color: 'var(--accent-light)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {place.relevance}% match
           </Pill>
         </div>
       </div>
-
-      <Stack gap="lg" className="p-5">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+        style={{ padding: 20, display: 'grid', gap: 18 }}
+      >
         <div>
-          <p className="mb-2.5 text-sm font-semibold text-[var(--accent-light)]">
+          <p
+            style={{
+              color: 'var(--accent-light)',
+              marginBottom: 10,
+              fontWeight: 600,
+              fontSize: 14,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <MapPin size={14} />
             {place.city}, {place.countryName}
           </p>
           <p className="text-sm leading-[1.7] text-[var(--app-text-muted)]">{place.description}</p>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          {place.categories.map((category) => (
-            <Pill key={category} tone="accent" className="capitalize">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {place.categories.map((category, index) => (
+            <motion.span
+              key={category}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 + 0.04 * index, duration: 0.32 }}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 999,
+                background: 'var(--accent-soft)',
+                border: '1px solid var(--accent-soft)',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--accent-light)',
+                textTransform: 'capitalize',
+              }}
+            >
               {category.replace('_', ' ')}
-            </Pill>
+            </motion.span>
           ))}
         </div>
-
-        <Card className="grid gap-2.5">
+        <div
+          style={{
+            padding: 18,
+            borderRadius: 22,
+            background: 'var(--app-surface)',
+            border: '1px solid var(--app-border)',
+            display: 'grid',
+            gap: 12,
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+          }}
+        >
           <div>
-            <strong className="text-[13px] text-[var(--app-text-muted)]">{t('coordinates')}</strong>
-            <p className="mt-1 text-sm tabular-nums">
+            <strong
+              style={{
+                fontSize: 11,
+                color: 'var(--app-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                fontWeight: 700,
+              }}
+            >
+              {t('coordinates')}
+            </strong>
+            <p style={{ fontVariantNumeric: 'tabular-nums', fontSize: 14, marginTop: 6 }}>
               {place.coordinates.latitude.toFixed(4)}, {place.coordinates.longitude.toFixed(4)}
             </p>
           </div>
+          <div
+            style={{
+              height: 1,
+              background: 'var(--app-border)',
+              margin: '2px 0',
+            }}
+            aria-hidden
+          />
           <div>
-            <strong className="text-[13px] text-[var(--app-text-muted)]">{t('sourceLabel')}</strong>
-            <p className="mt-1 text-[13px] text-[var(--app-text)]">{place.sourceAttribution}</p>
+            <strong
+              style={{
+                fontSize: 11,
+                color: 'var(--app-text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                fontWeight: 700,
+              }}
+            >
+              {t('sourceLabel')}
+            </strong>
+            <p style={{ fontSize: 13, marginTop: 6, color: 'var(--app-text)' }}>{place.sourceAttribution}</p>
           </div>
         </Card>
 
         <PlacesMap places={[place]} height={220} />
-
-        <div className="flex flex-wrap gap-3">
-          <Button
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
             onClick={handleSave}
             aria-label={saved ? t('saved') : t('save')}
             aria-pressed={saved}
-            variant={saved ? 'primary' : 'secondary'}
-            className="min-w-[140px] flex-1"
+            style={{
+              flex: 1,
+              minWidth: 140,
+              padding: '16px 18px',
+              borderRadius: 18,
+              background: saved
+                ? 'linear-gradient(135deg, var(--accent), var(--accent-light))'
+                : 'var(--accent-soft)',
+              color: saved ? '#0f172a' : 'var(--accent-light)',
+              fontWeight: 700,
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              border: '1px solid var(--accent)',
+              boxShadow: saved ? '0 12px 28px var(--accent-glow)' : 'none',
+              transition: 'background 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out), color 0.22s var(--ease-out)',
+            }}
           >
-            <Heart size={16} fill={saved ? '#0f172a' : 'transparent'} />
+            <motion.span
+              animate={saved ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+              transition={{ duration: 0.36 }}
+              style={{ display: 'inline-flex' }}
+            >
+              <Heart size={16} fill={saved ? '#0f172a' : 'transparent'} />
+            </motion.span>
             {saved ? t('saved') : t('save')}
-          </Button>
-          <Button
+          </motion.button>
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
             onClick={handleShare}
             aria-label={t('share')}
-            variant="secondary"
-            className="min-w-[140px] flex-1"
+            style={{
+              flex: 1,
+              minWidth: 140,
+              padding: '16px 18px',
+              borderRadius: 18,
+              background: 'var(--app-surface)',
+              border: '1px solid var(--app-border)',
+              color: 'var(--app-text)',
+              fontWeight: 700,
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
           >
             <Share2 size={16} />
             {t('share')}
-          </Button>
+          </motion.button>
         </div>
-      </Stack>
+      </motion.div>
     </OverlayFrame>
   );
 }

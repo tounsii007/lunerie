@@ -10,14 +10,24 @@ export function usePlaceSearch() {
   const { preferences } = usePreferences();
   const [searchText, setSearchText] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  // Tracks the gap between "user is typing" and "request is in-flight" so the
+  // UI can render a distinct "queued" state while waiting for the debounce.
+  const [debouncePending, setDebouncePending] = useState(false);
 
   useEffect(() => {
+    const trimmed = searchText.trim();
+    if (trimmed === debouncedQuery) {
+      setDebouncePending(false);
+      return;
+    }
+    setDebouncePending(true);
     const timeout = window.setTimeout(() => {
-      startTransition(() => setDebouncedQuery(searchText.trim()));
+      startTransition(() => setDebouncedQuery(trimmed));
+      setDebouncePending(false);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [searchText]);
+  }, [searchText, debouncedQuery]);
 
   const enabled = debouncedQuery.length > 1;
   const parsedQuery = useMemo(() => (enabled ? SearchQuerySchema.parse({ text: debouncedQuery }) : null), [debouncedQuery, enabled]);
@@ -35,6 +45,7 @@ export function usePlaceSearch() {
     total: query.data?.total ?? 0,
     fromCache: query.data?.fromCache ?? false,
     isLoading: query.isLoading,
+    isPending: debouncePending,
     isEmpty: enabled && (query.data?.items.length ?? 0) === 0,
   };
 }

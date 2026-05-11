@@ -2,12 +2,14 @@ package com.lunerie.api.application.auth;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+import io.github.bucket4j.ConsumptionProbe;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Per-IP token-bucket limiter for sensitive auth endpoints.
@@ -17,11 +19,13 @@ import java.util.concurrent.ConcurrentMap;
  * are needed: nginx protects when traffic spreads across replicas; this protects
  * if nginx is bypassed or misconfigured.
  *
- * <p>Buckets are evicted when idle longer than {@code idleEvictionAfter} to prevent
+ * <p>Buckets are evicted when idle longer than {@code idleEviction} to prevent
  * unbounded growth from random IPs.
  */
 @Component
 public class RateLimiter {
+
+    private static final int EVICTION_THRESHOLD = 5_000;
 
     private final ConcurrentMap<String, Entry> buckets = new ConcurrentHashMap<>();
     private final long capacity;
@@ -43,7 +47,26 @@ public class RateLimiter {
 
     private record Entry(Bucket bucket, long lastTouchedNanos) {}
 
+    /** Outcome of a probe attempt — communicates remaining tokens or wait time. */
+    public record Outcome(boolean allowed, long remainingTokens, long retryAfterSeconds) {
+        public static Outcome ok(long remaining) {
+            return new Outcome(true, remaining, 0L);
+        }
+        public static Outcome denied(long retryAfterSeconds) {
+            return new Outcome(false, 0L, Math.max(1L, retryAfterSeconds));
+        }
+    }
+
     public boolean tryAcquire(String key) {
+        return probe(key).allowed();
+    }
+
+    /**
+     * Consume a token if available and return the post-consume state, including
+     * a Retry-After hint when denied. Use this when the caller needs to surface
+     * 429 with backoff guidance.
+     */
+    public Outcome probe(String key) {
         long now = System.nanoTime();
         Entry entry = buckets.compute(key, (k, existing) -> {
             if (existing != null) return new Entry(existing.bucket(), now);
@@ -52,11 +75,17 @@ public class RateLimiter {
                     .build();
             return new Entry(bucket, now);
         });
-        // Opportunistic eviction (no scheduled job needed).
-        if (buckets.size() > 5_000) {
+
+        if (buckets.size() > EVICTION_THRESHOLD) {
             evictIdle(now);
         }
-        return entry.bucket().tryConsume(1);
+
+        ConsumptionProbe consumption = entry.bucket().tryConsumeAndReturnRemaining(1);
+        if (consumption.isConsumed()) {
+            return Outcome.ok(consumption.getRemainingTokens());
+        }
+        long waitSeconds = TimeUnit.NANOSECONDS.toSeconds(consumption.getNanosToWaitForRefill());
+        return Outcome.denied(waitSeconds == 0 ? 1L : waitSeconds);
     }
 
     private void evictIdle(long now) {

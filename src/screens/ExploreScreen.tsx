@@ -12,7 +12,7 @@ import {
   SectionHeading,
   SpotlightPanel,
 } from '@/components/AppShell';
-import { IconBox, PlaceCardSkeleton, Stack } from '@/components/primitives';
+import { SkeletonCountryRail, SkeletonPlaceCard } from '@/components/Skeleton';
 import { useCountries } from '@/hooks/useCountries';
 import { useExplorePlaces } from '@/hooks/useExplorePlaces';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -118,10 +118,11 @@ export function ExploreScreen() {
           value={`${totalPlaces}`}
         />
         {isLoading && !items.length ? (
-          <Stack gap="lg" aria-busy="true" aria-live="polite">
-            <PlaceCardSkeleton />
-            <PlaceCardSkeleton />
-          </Stack>
+          <div style={{ display: 'grid', gap: 18 }} aria-busy="true">
+            {[0, 1].map((index) => (
+              <SkeletonPlaceCard key={index} />
+            ))}
+          </div>
         ) : (
           <motion.div {...motionSafe.stagger()} className="grid gap-[18px]">
             {items.map((place) => (
@@ -167,6 +168,8 @@ export function ExploreScreen() {
               </CarouselButton>
             </div>
           </div>
+        ) : isLoading ? (
+          <SkeletonCountryRail />
         ) : (
           <EmptyState title="No countries yet" body="The country catalog will appear here." />
         )}

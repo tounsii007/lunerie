@@ -5,7 +5,11 @@
  * - Bearer-token auth with automatic refresh via the /api/auth/refresh rotation flow.
  * - Tokens are persisted to localStorage so the SPA survives reloads.
  * - Network/parse errors surface as `LunerieApiError`.
+ * - Every request carries a W3C `traceparent` header so backend traces
+ *   inherit the frontend trace id (see {@link ../tracing}).
  */
+
+import { buildTraceparent } from '@/api/tracing';
 
 const TOKEN_STORAGE_KEY = 'lunerie/auth-tokens-v1';
 
@@ -24,6 +28,8 @@ export class LunerieApiError extends Error {
     message: string,
     public readonly path?: string,
     public readonly violations?: Array<{ field: string; message: string; rejectedValue: unknown }>,
+    public readonly requestId?: string,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'LunerieApiError';
@@ -170,6 +176,11 @@ async function rawJson<T>(path: string, options: RequestOptions = {}): Promise<T
   if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
+  // W3C TraceContext propagation — backend's Micrometer Tracing picks this up
+  // and the resulting span becomes a child of the frontend trace.
+  if (!headers['traceparent']) {
+    headers['traceparent'] = buildTraceparent().header;
+  }
 
   const tokens = tokenStore.tokens;
   if (options.auth !== 'none' && tokens?.accessToken) {
@@ -211,13 +222,26 @@ async function rawJson<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (!response.ok) {
-    const errBody = (payload as { code?: string; message?: string; path?: string; violations?: [] } | undefined) ?? {};
+    const errBody =
+      (payload as {
+        code?: string;
+        message?: string;
+        path?: string;
+        violations?: [];
+        requestId?: string;
+        retryAfterSeconds?: number;
+      } | undefined) ?? {};
+    const retryAfterHeader = response.headers.get('Retry-After');
+    const retryAfter = errBody.retryAfterSeconds
+      ?? (retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : undefined);
     throw new LunerieApiError(
       response.status,
       errBody.code ?? `HTTP_${response.status}`,
       errBody.message ?? `Request failed (${response.status})`,
       errBody.path,
       errBody.violations,
+      errBody.requestId ?? response.headers.get('X-Request-Id') ?? undefined,
+      Number.isFinite(retryAfter) ? retryAfter : undefined,
     );
   }
 

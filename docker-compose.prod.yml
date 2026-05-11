@@ -41,6 +41,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker,prod
       LOG_LEVEL_APP: INFO
       LOG_LEVEL_ROOT: INFO
+      # Prod: head-sample at 10% to bound trace volume + Tempo storage cost.
+      # Override per-rollout with LUNERIE_TRACING_SAMPLE_RATE in .env.
+      LUNERIE_TRACING_SAMPLE_RATE: ${LUNERIE_TRACING_SAMPLE_RATE:-0.1}
+      LUNERIE_ENV: ${LUNERIE_ENV:-prod}
     deploy:
       replicas: ${BACKEND_REPLICAS:-3}
       restart_policy:
@@ -70,6 +74,27 @@ services:
     restart: always
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+
+  tempo:
+    restart: always
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # Prod: longer retention to support week-over-week regression hunts.
+    environment:
+      TEMPO_RETENTION: ${TEMPO_RETENTION:-336h}  # 14 days
+    deploy:
+      resources:
+        limits:
+          memory: ${TEMPO_MEM_LIMIT:-1G}
+
+  otel-collector:
+    restart: always
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    deploy:
+      resources:
+        limits:
+          memory: ${OTEL_COLLECTOR_MEM_LIMIT:-256M}
 
   grafana:
     restart: always

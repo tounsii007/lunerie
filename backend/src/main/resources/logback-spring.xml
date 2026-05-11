@@ -3,10 +3,10 @@
     <springProperty scope="context" name="appName"   source="spring.application.name" defaultValue="lunerie-api"/>
     <springProperty scope="context" name="instance"  source="LUNERIE_INSTANCE_ID"     defaultValue="local"/>
 
-    <!-- Pretty console for local dev -->
+    <!-- Pretty console for local dev. traceId/spanId appear when Micrometer Tracing is active. -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%X{requestId:-}] [%X{userId:-}] %-40.40logger{39} : %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%X{traceId:-}/%X{spanId:-}] [%X{requestId:-}] [%X{userId:-}] %-40.40logger{39} : %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
@@ -31,7 +31,9 @@
                           "thread": "%thread",
                           "logger": "%logger",
                           "requestId": "%mdc{requestId:-}",
-                          "userId": "%mdc{userId:-}"
+                          "userId": "%mdc{userId:-}",
+                          "traceId": "%mdc{traceId:-}",
+                          "spanId": "%mdc{spanId:-}"
                         }
                     </pattern>
                 </pattern>

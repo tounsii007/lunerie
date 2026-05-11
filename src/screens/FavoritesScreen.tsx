@@ -42,11 +42,28 @@ export function FavoritesScreen() {
 
   return (
     <ScreenContainer>
-      <motion.div {...motionSafe.fadeUp()} className="grid gap-[22px]">
-        <ScreenHeader
-          eyebrow="Your library"
-          title={t('favorites')}
-        />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ display: 'grid', gap: 22 }}
+      >
+        <header style={{ display: 'grid', gap: 8 }}>
+          <span style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent-light)', fontWeight: 700 }}>
+            Your library
+          </span>
+          <h1
+            style={{
+              fontFamily: '"Fraunces", serif',
+              fontSize: 38,
+              lineHeight: 1,
+              letterSpacing: '-0.022em',
+              fontWeight: 600,
+            }}
+          >
+            {t('favorites')}
+          </h1>
+        </header>
 
         <div className="grid grid-cols-2 gap-3">
           <StatCard icon={<Heart size={16} />} value={animatedCount} label="Saved" />
@@ -61,28 +78,63 @@ export function FavoritesScreen() {
               description="Pick up where you left off."
               value={`${recentViews.length}`}
             />
-            <div className="scrollbar-hidden flex gap-3 overflow-x-auto pb-1">
-              {recentViews.slice(0, 8).map((place) => (
-                <button
+            <div
+              className="scrollbar-hidden"
+              style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}
+            >
+              {recentViews.slice(0, 8).map((place, index) => (
+                <motion.button
                   key={place.id}
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.04 * index, duration: 0.32 }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => openPlace(place)}
-                  className="grid w-[180px] min-w-[180px] overflow-hidden rounded-[22px] border border-[var(--app-border)] bg-[var(--app-surface)] text-left shadow-[0_10px_30px_rgba(2,8,23,0.18)]"
+                  style={{
+                    width: 180,
+                    minWidth: 180,
+                    borderRadius: 22,
+                    overflow: 'hidden',
+                    background: 'var(--app-surface)',
+                    border: '1px solid var(--app-border)',
+                    textAlign: 'left',
+                    boxShadow: '0 10px 30px rgba(2, 8, 23, 0.22)',
+                  }}
                 >
-                  <img
-                    src={place.heroImage.url}
-                    alt={place.name}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-[110px] w-full object-cover"
-                  />
-                  <div className="grid gap-1 p-3">
-                    <strong className="text-sm leading-tight">{place.name}</strong>
-                    <span className="flex items-center gap-1 text-[11px] text-[var(--app-text-muted)]">
+                  <div style={{ position: 'relative' }}>
+                    <img
+                      src={place.heroImage.url}
+                      alt={place.name}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }}
+                    />
+                    <div
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(180deg, transparent 60%, rgba(2,6,23,0.42))',
+                      }}
+                    />
+                  </div>
+                  <div style={{ padding: 12, display: 'grid', gap: 4 }}>
+                    <strong style={{ fontSize: 14, lineHeight: 1.22, letterSpacing: '-0.008em' }}>{place.name}</strong>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--app-text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
                       <MapPin size={11} />
                       {place.city}
                     </span>
                   </div>
-                </button>
+                </motion.button>
               ))}
             </div>
           </section>
@@ -113,5 +165,62 @@ export function FavoritesScreen() {
         </section>
       </motion.div>
     </ScreenContainer>
+  );
+}
+
+function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        padding: 16,
+        borderRadius: 20,
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-border)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        display: 'grid',
+        gap: 8,
+        boxShadow: 'var(--shadow-soft, 0 10px 30px rgba(2, 8, 23, 0.18))',
+      }}
+    >
+      <span
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: 10,
+          background:
+            'radial-gradient(circle at 30% 30%, var(--accent-soft), transparent 80%), var(--accent-soft)',
+          color: 'var(--accent)',
+          display: 'grid',
+          placeItems: 'center',
+        }}
+      >
+        {icon}
+      </span>
+      <strong
+        style={{
+          fontSize: 26,
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
+      </strong>
+      <span
+        style={{
+          fontSize: 11,
+          color: 'var(--app-text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </span>
+    </motion.div>
   );
 }
