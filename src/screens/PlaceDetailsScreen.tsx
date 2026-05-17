@@ -123,7 +123,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
             }}
           >
             {place.relevance}% match
-          </Pill>
+          </span>
         </div>
       </div>
       <motion.div
@@ -221,7 +221,7 @@ export function PlaceDetailsScreen({ place }: { place: Place }) {
             </strong>
             <p style={{ fontSize: 13, marginTop: 6, color: 'var(--app-text)' }}>{place.sourceAttribution}</p>
           </div>
-        </Card>
+        </div>
 
         <PlacesMap places={[place]} height={220} />
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

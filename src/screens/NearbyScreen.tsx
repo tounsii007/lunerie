@@ -247,7 +247,7 @@ export function NearbyScreen() {
               />
             </motion.div>
           ))}
-        </Stack>
+        </section>
       </motion.div>
     </ScreenContainer>
   );

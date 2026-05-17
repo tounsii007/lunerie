@@ -286,7 +286,7 @@ export function SearchScreen() {
               />
             </motion.div>
           ))}
-        </Stack>
+        </section>
       </motion.div>
     </ScreenContainer>
   );
