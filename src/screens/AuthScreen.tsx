@@ -4,6 +4,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Lock, LogIn, Mail, Sparkles, UserPlus
 import { toast } from 'sonner';
 import { useAuth } from '@/state/auth-context';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useMotionSafe } from '@/hooks/useMotionSafe';
 import { useI18n } from '@/i18n/I18nProvider';
 import { LunerieApiError } from '@/api/lunerie/lunerieClient';
 
@@ -29,6 +30,13 @@ function evaluatePassword(password: string): { strength: number; checks: Passwor
   const strength = checks.filter((c) => c.passed).length;
   return { strength, checks };
 }
+
+// Shared <input> styling for the email / password / display-name fields.
+// Was referenced from three call sites but never defined — likely lost in
+// the refactor that moved Field into primitives. The class chain mirrors
+// the existing "soft glass field" look elsewhere in the app.
+const inputClasses =
+  'w-full bg-transparent text-sm font-medium text-[var(--app-text)] placeholder:text-[var(--app-text-muted)] outline-none';
 
 export function AuthScreen({ onAuthenticated, onBack }: AuthScreenProps) {
   const { t } = useI18n();

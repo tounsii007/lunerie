@@ -12,6 +12,7 @@ import {
   SectionHeading,
   SpotlightPanel,
 } from '@/components/AppShell';
+import { IconBox } from '@/components/primitives';
 import { SkeletonCountryRail, SkeletonPlaceCard } from '@/components/Skeleton';
 import { useCountries } from '@/hooks/useCountries';
 import { useExplorePlaces } from '@/hooks/useExplorePlaces';

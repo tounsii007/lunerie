@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Heart, MapPin } from 'lucide-react';
 import { EmptyState, PlaceCard, ScreenContainer, SectionHeading } from '@/components/AppShell';
-import { ScreenHeader, StatCard, Stack } from '@/components/primitives';
+// StatCard is intentionally not imported from primitives — this file
+// declares its own local StatCard (motion.div with shadow + counter
+// styling) further down. Importing both creates a name conflict.
+import { ScreenHeader, Stack } from '@/components/primitives';
 import type { Place } from '@/domain/models';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useFavorites } from '@/state/favorites-context';

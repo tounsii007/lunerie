@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/primitives';
 import { useAuth } from '@/state/auth-context';
 import lunerie, { LunerieApiError } from '@/api/lunerie/lunerieClient';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useMotionSafe } from '@/hooks/useMotionSafe';
 import { useI18n } from '@/i18n/I18nProvider';
 import { AuthScreen } from '@/screens/AuthScreen';
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Radar, Search, Sparkles, X } from 'lucide-react';
 import {
@@ -26,6 +26,8 @@ export function SearchScreen() {
   const { toggleFavorite, isFavorite } = useFavorites();
   const { openPlace } = useNavigation();
   const haptic = useHaptic();
+  const motionSafe = useMotionSafe();
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [focused, setFocused] = useState(false);
 
   // Auto-focus the search field when the screen mounts. useRef + useEffect
@@ -90,6 +92,7 @@ export function SearchScreen() {
                 <Search size={18} />
               </motion.span>
               <input
+                ref={inputRef}
                 id="lunerie-search-input"
                 type="search"
                 inputMode="search"
