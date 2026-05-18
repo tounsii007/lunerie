@@ -93,6 +93,14 @@ jobs:
       - name: Build (production)
         run: npm run build
       - name: Run unit tests
+        # ErrorBoundary tests intentionally re-render React trees that
+        # throw; default Vitest pool keeps every intermediate root in
+        # the worker until GC, and on the runner with 7G total that
+        # tips over to OOM ("Ineffective mark-compacts near heap
+        # limit"). Bumping the per-process heap to 4 GB carries the
+        # current suite comfortably.
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm test --silent
       - name: Bundle size report
         run: |
@@ -173,7 +181,7 @@ jobs:
           load: true
           tags: lunerie/api:scan
       - name: Trivy scan (image)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'lunerie/api:scan'
           severity: 'HIGH,CRITICAL'
