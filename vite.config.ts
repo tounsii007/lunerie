@@ -41,5 +41,20 @@ export default defineConfig({
     setupFiles: './vitest.setup.ts',
     globals: true,
     css: true,
+    // Forks pool with isolation per file keeps the ErrorBoundary
+    // remount specs from sharing a jsdom heap across files — the
+    // default threads pool was leaking React roots between tests
+    // and tipped over to OOM after ~4h of accumulating cruft on the
+    // CI runner.
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
+    // Hard ceiling so a runaway suite can't burn 4h before the
+    // runner kills the job.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });
