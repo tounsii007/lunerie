@@ -81,6 +81,10 @@ jobs:
   frontend:
     name: frontend · build + tests (Node 22)
     runs-on: ubuntu-latest
+    # Hard ceiling so a hung test runner can't burn the runner's
+    # 6h default budget. ErrorBoundary.test.tsx is currently
+    # described .skip after it hung for 4h+ on a previous run.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
