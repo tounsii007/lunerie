@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 node_modules/
 
 # Build output
@@ -39,3 +39,6 @@ coverage/
 # Maven wrapper jars are kept; only ignore local working state
 backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar.lck
+
+# Claude Code agent workspace (worktrees, MCP state, local settings)
+.claude/
